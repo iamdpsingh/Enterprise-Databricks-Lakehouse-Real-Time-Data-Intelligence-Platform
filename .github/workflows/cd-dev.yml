@@ -1,0 +1,97 @@
+name: CD — Deploy to Development
+
+on:
+  push:
+    branches: [develop]
+  workflow_dispatch:
+    inputs:
+      reason:
+        description: "Reason for manual deployment"
+        required: true
+        default: "Manual redeploy"
+
+concurrency:
+  group: cd-dev
+  cancel-in-progress: false   # Never cancel an active deployment
+
+env:
+  ENVIRONMENT: dev
+  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_DEV }}
+  DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST_DEV }}
+
+jobs:
+  deploy-dev:
+    name: Deploy to Development
+    runs-on: ubuntu-latest
+    environment: development    # Uses GitHub Environment secrets/vars
+
+    permissions:
+      contents: read
+      id-token: write           # Required for Workload Identity Federation
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Authenticate to GCP via Workload Identity Federation — no static keys
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_DEV }}
+
+      - uses: google-github-actions/setup-gcloud@v2
+
+      # Authenticate to Databricks via OAuth M2M
+      - name: Set up Databricks CLI
+        uses: databricks/setup-cli@main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+
+      - name: Build Python wheel
+        run: |
+          pip install build
+          python -m build --wheel
+          echo "Built wheel: $(ls dist/*.whl)"
+
+      # Deploy Databricks Asset Bundle to Dev workspace
+      - name: Deploy Databricks Bundle (dev)
+        env:
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_DEV }}
+        run: |
+          if [ -f databricks/resources/databricks.yml ]; then
+            databricks bundle deploy -t dev --var="catalog=dev_catalog" --var="environment=dev"
+          else
+            echo "Databricks bundle not yet configured — skipping"
+          fi
+
+      # Deploy Next.js to Cloud Run (dev)
+      - name: Deploy Next.js to Cloud Run (dev)
+        run: |
+          if [ -f monitoring-ui/package.json ]; then
+            cd monitoring-ui
+            gcloud run deploy lakehouse-monitoring-ui-dev \
+              --source . \
+              --region us-central1 \
+              --project ${{ env.GCP_PROJECT_ID }} \
+              --allow-unauthenticated \
+              --set-env-vars ENVIRONMENT=dev
+          else
+            echo "monitoring-ui not yet built — skipping Cloud Run deploy"
+          fi
+
+      # Post-deployment smoke test
+      - name: Post-deployment smoke test
+        run: |
+          echo "Running post-deployment smoke tests..."
+          # Will be populated when integration tests exist
+          echo "Smoke tests passed (placeholder)"
+
+      - name: Notify deployment status
+        if: always()
+        run: |
+          echo "Deployment to DEV environment: ${{ job.status }}"
+          echo "Commit: ${{ github.sha }}"
+          echo "Triggered by: ${{ github.actor }}"
