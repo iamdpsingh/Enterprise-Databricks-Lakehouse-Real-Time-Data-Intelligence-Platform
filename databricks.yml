@@ -1,0 +1,54 @@
+# Databricks Asset Bundles (DABs) configuration
+# This file defines the infrastructure as code for the Databricks Lakehouse platform.
+
+bundle:
+  name: enterprise_lakehouse
+
+variables:
+  catalog_name:
+    description: "The Unity Catalog name to deploy to."
+    default: "main"
+  storage_location:
+    description: "GCS bucket path for external locations."
+    default: "gs://enterprise-lakehouse-dev"
+
+workspace:
+  host: https://your-databricks-instance.gcp.databricks.com
+
+environments:
+  dev:
+    workspace:
+      host: https://dev-databricks-instance.gcp.databricks.com
+    variables:
+      catalog_name: "dev_catalog"
+      storage_location: "gs://enterprise-lakehouse-dev"
+    default: true
+    
+  prod:
+    workspace:
+      host: https://prod-databricks-instance.gcp.databricks.com
+    variables:
+      catalog_name: "prod_catalog"
+      storage_location: "gs://enterprise-lakehouse-prod"
+
+# Define the resources (Jobs, DLT Pipelines, Models)
+resources:
+  # Jobs define automated workflows
+  jobs:
+    ingestion_job:
+      name: "[${bundle.environment}] Data Ingestion"
+      
+      job_clusters:
+        - job_cluster_key: ingestion_cluster
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: "n2-standard-4"
+            num_workers: 2
+            gcp_attributes:
+              use_preemptible_executors: false
+            
+      tasks:
+        - task_key: run_autoloader
+          job_cluster_key: ingestion_cluster
+          spark_python_task:
+            python_file: src/ingestion/autoloader.py
