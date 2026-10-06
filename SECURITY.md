@@ -16,7 +16,7 @@
 
 Report vulnerabilities privately via one of these channels:
 - **GitHub Private Vulnerability Reporting** (preferred): Go to the repository → Security tab → "Report a vulnerability".
-- **Email**: Send details to `security@your-domain.com` with subject `[SECURITY] Enterprise Lakehouse - <brief description>`.
+- **GitHub Discussion (Private)**: Use GitHub's private vulnerability reporting — go to the repository → Security tab → "Report a vulnerability" (this is the only supported reporting channel for this project).
 
 ### What to Include in Your Report
 - Description of the vulnerability and potential impact.
