@@ -38,3 +38,42 @@ async def get_customer_metrics(
     except Exception as e:
         logger.error(f"Error querying Databricks: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
+
+@router.get("/metrics/orders/summary")
+async def get_orders_summary(
+    conn: Any = Depends(get_databricks_connection)
+) -> Dict[str, Any]:
+    """
+    Fetches real-time aggregated global order metrics from the Gold layer.
+    This endpoint powers the top-level Next.js dashboard.
+    """
+    logger.info("API Request: fetch global order metrics summary")
+    
+    # In a real environment we'd query the Gold table we created: main.gold.order_metrics
+    query = """
+        SELECT 
+            SUM(daily_revenue) as total_lifetime_value, 
+            SUM(daily_order_count) as total_orders, 
+            MAX(unique_customers) as active_users
+        FROM main.gold.order_metrics
+    """
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            result = cursor.fetchone()
+            
+            if not result or result[0] is None:
+                # Return defaults if table is empty
+                return {
+                    "total_lifetime_value": 0,
+                    "total_orders": 0,
+                    "active_users": 0
+                }
+                
+            columns = [desc[0] for desc in cursor.description]
+            return dict(zip(columns, result))
+            
+    except Exception as e:
+        logger.error(f"Error querying Databricks for order summary: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal database error")

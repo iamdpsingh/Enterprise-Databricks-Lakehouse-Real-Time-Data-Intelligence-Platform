@@ -18,14 +18,18 @@ export default function Dashboard() {
     // Simulate fetching from our FastAPI backend
     const fetchMetrics = async () => {
       try {
-        // In production, this would be: await fetch('http://localhost:8000/v1/metrics/customer/all')
-        // We'll simulate a slight network delay and return mock data for demonstration
-        await new Promise(resolve => setTimeout(resolve, 800));
+        // Fetch real data from the FastAPI backend
+        const res = await fetch('http://localhost:8000/v1/metrics/orders/summary');
         
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
+        
+        const data = await res.json();
         setMetrics({
-          total_lifetime_value: 1254300.50,
-          total_orders: 8432,
-          active_users: 1240,
+          total_lifetime_value: data.total_lifetime_value || 0,
+          total_orders: data.total_orders || 0,
+          active_users: data.active_users || 0,
         });
       } catch (error) {
         console.error("Failed to fetch metrics:", error);
