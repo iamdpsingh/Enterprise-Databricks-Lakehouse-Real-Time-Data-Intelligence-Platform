@@ -52,3 +52,70 @@ resources:
           job_cluster_key: ingestion_cluster
           spark_python_task:
             python_file: src/ingestion/autoloader.py
+
+    orders_pipeline:
+      name: "[${bundle.environment}] Orders End-to-End Pipeline"
+      
+      job_clusters:
+        - job_cluster_key: orders_cluster
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: "n2-standard-4"
+            num_workers: 2
+            
+      tasks:
+        - task_key: bronze_ingestion
+          job_cluster_key: orders_cluster
+          spark_python_task:
+            python_file: src/pipelines/orders/main.py
+            parameters:
+              - "--layer"
+              - "bronze"
+              - "--source-path"
+              - "${var.storage_location}/raw/orders"
+              - "--bronze-table"
+              - "${var.catalog_name}.bronze.orders"
+              - "--silver-table"
+              - "${var.catalog_name}.silver.orders"
+              - "--gold-table"
+              - "${var.catalog_name}.gold.order_metrics"
+              - "--quarantine-table"
+              - "${var.catalog_name}.silver.quarantine_orders"
+              - "--checkpoint-path"
+              - "${var.storage_location}/checkpoints/orders"
+
+        - task_key: silver_processing
+          depends_on:
+            - task_key: bronze_ingestion
+          job_cluster_key: orders_cluster
+          spark_python_task:
+            python_file: src/pipelines/orders/main.py
+            parameters:
+              - "--layer"
+              - "silver"
+              - "--bronze-table"
+              - "${var.catalog_name}.bronze.orders"
+              - "--silver-table"
+              - "${var.catalog_name}.silver.orders"
+              - "--gold-table"
+              - "${var.catalog_name}.gold.order_metrics"
+              - "--quarantine-table"
+              - "${var.catalog_name}.silver.quarantine_orders"
+
+        - task_key: gold_aggregation
+          depends_on:
+            - task_key: silver_processing
+          job_cluster_key: orders_cluster
+          spark_python_task:
+            python_file: src/pipelines/orders/main.py
+            parameters:
+              - "--layer"
+              - "gold"
+              - "--bronze-table"
+              - "${var.catalog_name}.bronze.orders"
+              - "--silver-table"
+              - "${var.catalog_name}.silver.orders"
+              - "--gold-table"
+              - "${var.catalog_name}.gold.order_metrics"
+              - "--quarantine-table"
+              - "${var.catalog_name}.silver.quarantine_orders"
