@@ -43,12 +43,15 @@ def test_process_inventory_silver_quarantine(spark: SparkSession, tmp_path, inve
     ])
     spark.createDataFrame([], silver_schema).write.format("delta").save(silver_path)
     
+    spark.sql("DROP TABLE IF EXISTS bronze_inv")
+    spark.sql("DROP TABLE IF EXISTS silver_inv")
     spark.sql(f"CREATE TABLE bronze_inv USING DELTA LOCATION '{bronze_path}'")
     spark.sql(f"CREATE TABLE silver_inv USING DELTA LOCATION '{silver_path}'")
     
     # Create empty quarantine delta table schema
     quarantine_schema = StructType(inventory_bronze_schema.fields + [StructField("quarantine_reason", StringType(), True)])
     spark.createDataFrame([], quarantine_schema).write.format("delta").save(quarantine_path)
+    spark.sql("DROP TABLE IF EXISTS quarantine_inv")
     spark.sql(f"CREATE TABLE quarantine_inv USING DELTA LOCATION '{quarantine_path}'")
     
     process_inventory_silver(spark, "bronze_inv", "silver_inv", "quarantine_inv")

@@ -63,7 +63,7 @@ def process_trips_gold(
     else:
         query = query.trigger(processingTime=trigger)
         
-    streaming_query = query.table(gold_table)
+    streaming_query = query.toTable(gold_table)
     
     if trigger == "availableNow":
         streaming_query.awaitTermination()

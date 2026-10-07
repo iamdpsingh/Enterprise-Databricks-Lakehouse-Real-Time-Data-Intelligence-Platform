@@ -83,7 +83,7 @@ def start_ingestion_stream(
     else:
         query = query.trigger(processingTime=trigger)
         
-    streaming_query = query.table(target_table)
+    streaming_query = query.toTable(target_table)
     
     if trigger == "availableNow":
         streaming_query.awaitTermination()

@@ -1,33 +1,28 @@
 import pytest
 from pyspark.sql import Row
 from pyspark.sql.types import StructType, StructField, IntegerType, StringType
+from pyspark.sql import functions as F
 
-from src.quality.rules import expect_column_to_not_be_null, expect_column_values_to_be_in_set
-from src.quality.quarantine import QuarantineManager
+from src.quality.rules import rule_is_not_null, rule_matches_regex, QualityRule, build_composite_rule_expression, extract_failed_rule_names
+from src.quality.quarantine import apply_quality_rules
 
-def test_expect_column_to_not_be_null():
-    """Test generating a NOT NULL DLT constraint."""
-    rule = expect_column_to_not_be_null("customer_id")
-    assert rule["name"] == "valid_customer_id"
-    assert rule["constraint"] == "customer_id IS NOT NULL"
-    assert rule["action"] == "drop"
+def test_rule_is_not_null():
+    """Test generating a NOT NULL rule."""
+    rule = rule_is_not_null("customer_id")
+    assert rule.name == "customer_id_not_null"
+    assert rule.description == "Ensures column 'customer_id' contains no null values"
+    assert rule.is_fatal is True
+    # rule.expression is a Column, we can't assert its string value easily, but we can verify it's a Column
 
-def test_expect_column_to_not_be_null_custom_action():
-    """Test generating a NOT NULL constraint with fail action."""
-    rule = expect_column_to_not_be_null("id", action="fail")
-    assert rule["name"] == "valid_id"
-    assert rule["constraint"] == "id IS NOT NULL"
-    assert rule["action"] == "fail"
-
-def test_expect_column_values_to_be_in_set():
-    """Test generating an IN SET DLT constraint."""
-    rule = expect_column_values_to_be_in_set("status", ["ACTIVE", "PENDING"])
-    assert rule["name"] == "valid_status"
-    assert rule["constraint"] == "status IN ('ACTIVE', 'PENDING')"
-    assert rule["action"] == "drop"
+def test_rule_matches_regex():
+    """Test generating a regex rule."""
+    rule = rule_matches_regex("status", "^(ACTIVE|PENDING)$")
+    assert rule.name == "status_matches_regex"
+    assert rule.description == "Ensures column 'status' matches pattern '^(ACTIVE|PENDING)$'"
+    assert rule.is_fatal is True
 
 def test_quarantine_manager_split(spark):
-    """Test splitting valid and invalid records using QuarantineManager."""
+    """Test splitting valid and invalid records using apply_quality_rules."""
     schema = StructType([
         StructField("id", IntegerType(), True),
         StructField("email", StringType(), True)
@@ -41,10 +36,16 @@ def test_quarantine_manager_split(spark):
     
     df = spark.createDataFrame(data, schema)
     
+    rules = [
+        rule_is_not_null("id"),
+        rule_is_not_null("email")
+    ]
+    
     # We want valid records to have BOTH id and email
-    valid_df, quarantine_df = QuarantineManager.split_valid_invalid(
+    valid_df, quarantine_df = apply_quality_rules(
         df,
-        rules=["id IS NOT NULL", "email IS NOT NULL"]
+        rules=rules,
+        quarantine_reason_col="_quarantine_failed_rules"
     )
     
     valid_records = valid_df.collect()
@@ -55,4 +56,5 @@ def test_quarantine_manager_split(spark):
     
     assert len(quarantine_records) == 2
     # Verify the quarantine column was added
-    assert "quarantine_reasons" in quarantine_df.columns
+    assert "_quarantine_failed_rules" in quarantine_df.columns
+

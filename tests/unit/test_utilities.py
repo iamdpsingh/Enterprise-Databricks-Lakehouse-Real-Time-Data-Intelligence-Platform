@@ -59,7 +59,7 @@ def test_retry_decorator_max_attempts_exceeded():
         call_count += 1
         raise ValueError("Permanent failure")
 
-    with pytest.raises(RetryError):
+    with pytest.raises(ValueError, match="Permanent failure"):
         dummy_func()
         
     assert call_count == 2

@@ -88,8 +88,8 @@ def process_trips_silver(
         clean_query = clean_query.trigger(processingTime=trigger)
         quar_query = quar_query.trigger(processingTime=trigger)
         
-    sq_clean = clean_query.table(silver_table)
-    sq_quar = quar_query.table(quarantine_table)
+    sq_clean = clean_query.toTable(silver_table)
+    sq_quar = quar_query.toTable(quarantine_table)
     
     if trigger == "availableNow":
         sq_clean.awaitTermination()

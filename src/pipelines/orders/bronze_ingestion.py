@@ -1,6 +1,6 @@
 from pyspark.sql import SparkSession
 
-from src.ingestion.autoloader import read_stream_autoloader
+from src.ingestion.autoloader import AutoLoaderStream, start_ingestion_stream
 from src.utilities.logger import logger
 
 def ingest_orders_bronze(spark: SparkSession, source_path: str, bronze_table: str, checkpoint_path: str) -> None:
@@ -11,22 +11,20 @@ def ingest_orders_bronze(spark: SparkSession, source_path: str, bronze_table: st
     logger.info(f"Starting Bronze ingestion for Orders from {source_path}")
     
     # 1. Setup Auto Loader Stream
-    stream_df = read_stream_autoloader(
-        spark=spark,
+    autoloader = AutoLoaderStream(spark)
+    stream_df = autoloader.create_read_stream(
         source_path=source_path,
-        data_format="json",
+        file_format="json",
+        checkpoint_path=checkpoint_path,
         schema_location=f"{checkpoint_path}/schema"
     )
     
     # 2. Write Stream to Bronze Delta Table
     logger.info(f"Writing stream to Bronze table: {bronze_table}")
-    query = (
-        stream_df.writeStream
-        .format("delta")
-        .option("checkpointLocation", f"{checkpoint_path}/write")
-        .trigger(availableNow=True) # Recommended for scheduled batch streaming
-        .table(bronze_table)
+    start_ingestion_stream(
+        df=stream_df,
+        target_table=bronze_table,
+        checkpoint_path=f"{checkpoint_path}/write",
+        trigger="availableNow"
     )
-    
-    query.awaitTermination()
     logger.info("Bronze ingestion for Orders completed.")

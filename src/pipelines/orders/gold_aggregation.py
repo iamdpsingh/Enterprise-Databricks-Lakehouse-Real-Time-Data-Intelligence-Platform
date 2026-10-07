@@ -28,6 +28,6 @@ def aggregate_orders_gold(spark: SparkSession, silver_table: str, gold_table: st
     logger.info(f"Writing aggregated data to {gold_table}")
     
     # Overwrite the Gold table (or merge depending on requirements, here we do a simple overwrite for the aggregate)
-    gold_df.write.format("delta").mode("overwrite").saveAsTable(gold_table)
+    gold_df.write.format("delta").mode("overwrite").option("overwriteSchema", "true").saveAsTable(gold_table)
     
     logger.info("Gold aggregation for Orders completed successfully.")

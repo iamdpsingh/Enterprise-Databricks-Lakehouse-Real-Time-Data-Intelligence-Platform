@@ -77,3 +77,36 @@ async def get_orders_summary(
     except Exception as e:
         logger.error(f"Error querying Databricks for order summary: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal database error")
+
+@router.get("/metrics/quality/quarantine")
+async def get_quarantine_records(
+    limit: int = 10,
+    conn: Any = Depends(get_databricks_connection)
+) -> Dict[str, Any]:
+    """
+    Fetches the most recent quarantined records from the Silver layer.
+    """
+    logger.info(f"API Request: fetch top {limit} quarantined records")
+    
+    query = f"""
+        SELECT _quarantine_reason, _quarantine_timestamp, order_id, customer_id
+        FROM main.silver.quarantine_orders
+        ORDER BY _quarantine_timestamp DESC
+        LIMIT {limit}
+    """
+    
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            results = cursor.fetchall()
+            
+            if not results:
+                return {"records": []}
+                
+            columns = [desc[0] for desc in cursor.description]
+            records = [dict(zip(columns, row)) for row in results]
+            return {"records": records}
+            
+    except Exception as e:
+        logger.error(f"Error querying Databricks for quarantine records: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal database error")

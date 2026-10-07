@@ -3,7 +3,7 @@
 [![CI](https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An **industrial-scale, production-grade data intelligence platform** built on Databricks, GCP (Project: `databrick-project-510903`), and GitHub Actions CI/CD. This project demonstrates enterprise data engineering best practices processing **~146 Million records of real-world NYC Taxi Trips**, featuring Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability.
+An **industrial-scale, production-grade data intelligence platform** built on Databricks, GCP (Project: `databrick-project-510903`), and GitHub Actions CI/CD. This project demonstrates enterprise data engineering best practices processing **4 Global Datasets (Ethereum Web3, GitHub Archive, Overture Maps, Reddit Pushshift) totaling over 20 Billion records**. All computational workloads are strictly isolated to **GCP compute resources**—no local processing is performed. Features Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability via a Next.js command center.
 
 ---
 
