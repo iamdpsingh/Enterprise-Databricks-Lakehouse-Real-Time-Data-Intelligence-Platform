@@ -10,7 +10,7 @@ variables:
     default: "main"
   storage_location:
     description: "GCS bucket path for external locations."
-    default: "gs://enterprise-lakehouse-dev"
+    default: "gs://databricks-lakehouse-510903-data"
 
 workspace:
   host: https://your-databricks-instance.gcp.databricks.com
@@ -21,7 +21,7 @@ environments:
       host: https://dev-databricks-instance.gcp.databricks.com
     variables:
       catalog_name: "dev_catalog"
-      storage_location: "gs://enterprise-lakehouse-dev"
+      storage_location: "gs://databricks-lakehouse-510903-data"
     default: true
     
   prod:
@@ -186,3 +186,76 @@ resources:
               - "${var.catalog_name}.gold.inventory_metrics"
               - "--quarantine-table"
               - "${var.catalog_name}.silver.quarantine_inventory"
+              - "--checkpoint-path"
+              - "${var.storage_location}/checkpoints/inventory"
+
+    trips_pipeline:
+      name: "[${bundle.environment}] NYC Taxi Trips 100M Pipeline"
+      
+      job_clusters:
+        - job_cluster_key: trips_cluster
+          new_cluster:
+            spark_version: "14.3.x-scala2.12"
+            node_type_id: "n2-standard-4"
+            num_workers: 4 # Higher workers for 146M rows
+            
+      tasks:
+        - task_key: bronze_ingestion
+          job_cluster_key: trips_cluster
+          spark_python_task:
+            python_file: src/pipelines/trips/main.py
+            parameters:
+              - "--layer"
+              - "bronze"
+              - "--source-path"
+              - "${var.storage_location}/landing/nyc_taxi_2015"
+              - "--bronze-table"
+              - "${var.catalog_name}.bronze.trips"
+              - "--silver-table"
+              - "${var.catalog_name}.silver.trips"
+              - "--gold-table"
+              - "${var.catalog_name}.gold.trips_metrics"
+              - "--quarantine-table"
+              - "${var.catalog_name}.silver.quarantine_trips"
+              - "--checkpoint-path"
+              - "${var.storage_location}/checkpoints/trips"
+
+        - task_key: silver_processing
+          depends_on:
+            - task_key: bronze_ingestion
+          job_cluster_key: trips_cluster
+          spark_python_task:
+            python_file: src/pipelines/trips/main.py
+            parameters:
+              - "--layer"
+              - "silver"
+              - "--bronze-table"
+              - "${var.catalog_name}.bronze.trips"
+              - "--silver-table"
+              - "${var.catalog_name}.silver.trips"
+              - "--gold-table"
+              - "${var.catalog_name}.gold.trips_metrics"
+              - "--quarantine-table"
+              - "${var.catalog_name}.silver.quarantine_trips"
+              - "--checkpoint-path"
+              - "${var.storage_location}/checkpoints/trips"
+
+        - task_key: gold_aggregation
+          depends_on:
+            - task_key: silver_processing
+          job_cluster_key: trips_cluster
+          spark_python_task:
+            python_file: src/pipelines/trips/main.py
+            parameters:
+              - "--layer"
+              - "gold"
+              - "--bronze-table"
+              - "${var.catalog_name}.bronze.trips"
+              - "--silver-table"
+              - "${var.catalog_name}.silver.trips"
+              - "--gold-table"
+              - "${var.catalog_name}.gold.trips_metrics"
+              - "--quarantine-table"
+              - "${var.catalog_name}.silver.quarantine_trips"
+              - "--checkpoint-path"
+              - "${var.storage_location}/checkpoints/trips"
