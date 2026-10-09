@@ -3,6 +3,7 @@ from dataclasses import dataclass
 
 from pyspark.sql import Column
 from pyspark.sql import functions as F
+from pyspark.sql.window import Window
 
 @dataclass
 class QualityRule:
@@ -32,13 +33,21 @@ def rule_matches_regex(column_name: str, pattern: str, is_fatal: bool = True) ->
 
 def rule_is_unique(column_name: str, is_fatal: bool = True) -> QualityRule:
     """
-    Creates a rule for uniqueness. 
-    Note: Standard column expressions cannot compute uniqueness across rows easily inline.
-    This rule usually implies a window function or distinct count evaluation at the dataset level.
-    For inline streaming/row-level checks, uniqueness is typically handled via constraints 
-    or deduplication steps rather than a boolean column expression.
+    Creates a rule for uniqueness using window functions.
+    This calculates row numbers partitioned by the column. If row_number > 1, it's not unique.
+    Note: Requires DataFrame evaluation before filtering, typically done in a wrapper function.
     """
-    pass # Placeholder for complex dataset-level rules
+    return QualityRule(
+        name=f"{column_name}_is_unique",
+        description=f"Ensures column '{column_name}' contains unique values",
+        expression=F.col(f"{column_name}_row_num") == 1,
+        is_fatal=is_fatal,
+    )
+
+def apply_uniqueness_window(df, column_name: str) -> "DataFrame":
+    """Helper to apply the window function required by rule_is_unique before rule evaluation."""
+    w = Window.partitionBy(column_name).orderBy(F.lit("A"))
+    return df.withColumn(f"{column_name}_row_num", F.row_number().over(w))
 
 def build_composite_rule_expression(rules: List[QualityRule]) -> Column:
     """
@@ -73,14 +82,7 @@ def extract_failed_rule_names(rules: List[QualityRule]) -> Column:
         for rule in rules
     ]
     
-    # Use array_remove to filter out nulls, then concat_ws to join them
-    array_expr = F.array(*failed_names_exprs)
-    clean_array = F.expr("filter({}, x -> x IS NOT NULL)".format(array_expr._jc.toString() if hasattr(array_expr, "_jc") else "array_placeholder"))
-    
-    # Simpler PySpark native approach without raw expr string manipulation:
-    # array_compact removes nulls in PySpark 3.4+
     if hasattr(F, "array_compact"):
         return F.array_join(F.array_compact(F.array(*failed_names_exprs)), ",")
     else:
-        # Fallback for older Spark versions
         return F.concat_ws(",", *failed_names_exprs)

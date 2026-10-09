@@ -5,6 +5,7 @@ from airflow import DAG
 from airflow.providers.databricks.operators.databricks import DatabricksRunNowOperator
 from airflow.operators.empty import EmptyOperator
 
+# Refined for Day 2: Added Databricks-specific retries and robust defaults
 default_args = {
     'owner': 'data-engineering',
     'depends_on_past': False,
@@ -12,6 +13,8 @@ default_args = {
     'email_on_retry': False,
     'retries': 3,
     'retry_delay': timedelta(minutes=5),
+    # Databricks specific timeout to prevent runaway clusters
+    'execution_timeout': timedelta(hours=2),
 }
 
 DATASETS = ['ethereum', 'github', 'overture', 'reddit']
@@ -23,11 +26,18 @@ with DAG(
     schedule_interval='@hourly',
     start_date=datetime(2025, 1, 1),
     catchup=False,
+    max_active_runs=1,
     tags=['lakehouse', 'databricks', 'medallion', 'gcp'],
 ) as dag:
 
     start_pipeline = EmptyOperator(task_id='start_pipeline')
+    
+    # Check data quality gates (simulated sensor task)
+    dq_gate = EmptyOperator(task_id='data_quality_gate')
+    
     end_pipeline = EmptyOperator(task_id='end_pipeline')
+    
+    start_pipeline >> dq_gate
     
     # We will trigger parallel execution for all 4 pipelines
     for ds in DATASETS:
@@ -39,6 +49,11 @@ with DAG(
             task_id=f'run_{ds}_pipeline',
             databricks_conn_id='databricks_default',
             job_id=job_id,
+            # Pass dynamic parameters to the job for telemetry
+            notebook_params={
+                "environment": "prod",
+                "dataset": ds
+            }
         )
         
-        start_pipeline >> run_pipeline >> end_pipeline
+        dq_gate >> run_pipeline >> end_pipeline
