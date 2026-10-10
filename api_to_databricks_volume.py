@@ -29,17 +29,16 @@ logger.info(f"Successfully authenticated to Databricks Workspace: {HOST}")
 
 def fetch_ethereum_data():
     try:
-        # Fetch real Ethereum price & volume from CoinCap API
-        r = requests.get('https://api.coincap.io/v2/assets/ethereum', timeout=5).json()
-        data = r.get('data', {})
+        # Fetch real Ethereum price & volume from Binance API
+        r = requests.get('https://api.binance.com/api/v3/ticker/24hr?symbol=ETHUSDT', timeout=5).json()
         return {
             "hash": f"eth_price_update_{uuid.uuid4().hex[:8]}",
-            "gas": str(int(float(data.get('priceUsd', random.randint(21000, 500000))))), # using price as proxy for 'gas' in our schema
-            "value": str(int(float(data.get('volumeUsd24Hr', random.randint(0, 1000000))))), # using 24h volume as proxy for 'value'
+            "gas": str(int(float(r.get('lastPrice', random.randint(21000, 500000))))), # using price as proxy for 'gas' in our schema
+            "value": str(int(float(r.get('volume', random.randint(0, 1000000))))), # using 24h volume as proxy for 'value'
             "block_timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
         }
     except Exception as e:
-        logger.warning(f"CoinCap API failed, falling back to local generator: {e}")
+        logger.warning(f"Crypto API failed, falling back to local generator: {e}")
         return {
             "hash": f"0x{uuid.uuid4().hex}",
             "gas": str(random.randint(21000, 500000)),
