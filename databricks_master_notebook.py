@@ -12,6 +12,9 @@
 from pyspark.sql.functions import current_timestamp, lit
 import logging
 
+# Disable Databricks 2.5-hour interactive query timeout to allow indefinite processing
+spark.conf.set("spark.databricks.execution.timeout", "0")
+
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 logger = logging.getLogger("DatabricksAutoLoader")
 
