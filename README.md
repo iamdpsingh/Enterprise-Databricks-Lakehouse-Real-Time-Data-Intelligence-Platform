@@ -1,114 +1,71 @@
-# Enterprise Databricks Lakehouse & Real-Time Data Intelligence Platform
+# 🌌 Enterprise Databricks Lakehouse & Real-Time Data Intelligence Platform
 
-[![CI](https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+![Architecture](https://img.shields.io/badge/Architecture-Medallion-blue.svg)
+![Platform](https://img.shields.io/badge/Compute-GCP_|_Databricks-orange.svg)
+![UI](https://img.shields.io/badge/Frontend-Next.js_14-black.svg)
+![Orchestration](https://img.shields.io/badge/Orchestration-Apache_Airflow-lightgrey.svg)
 
-An **industrial-scale, production-grade data intelligence platform** built on Databricks, GCP (Project: `databrick-project-510903`), and GitHub Actions CI/CD. This project demonstrates enterprise data engineering best practices processing **4 Global Datasets (Ethereum Web3, GitHub Archive, Overture Maps, Reddit Pushshift) totaling over 20 Billion records**. All computational workloads are strictly isolated to **GCP compute resources**—no local processing is performed. Features Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability via a Next.js command center.
+An industrial-scale, production-grade data platform built on **Databricks** and **Google Cloud Platform (GCP)**. This platform implements a strict **Medallion Architecture** managed by **Unity Catalog** to process, clean, and serve over **20 Billion records** from four massive global datasets.
 
----
-
-## 🏗️ Architecture Overview
-
-```
-Developer Laptop
-  └── Git Push / PR
-        └── GitHub (Control Plane)
-              ├── CI — Lint / Test / Scan / Validate
-              └── CD — Deploy to GCP + Databricks
-                    ├── GCP (Foundation)
-                    │     ├── Cloud Storage (Landing Zone)
-                    │     ├── Secret Manager
-                    │     ├── Artifact Registry (Docker)
-                    │     └── Cloud Run (Containerized Services)
-                    └── Databricks (Data Engine)
-                          ├── Unity Catalog (Governance)
-                          ├── Bronze → Silver → Gold (Medallion)
-                          ├── Structured Streaming
-                          ├── Lakeflow Pipelines
-                          └── MLflow
-```
+A state-of-the-art **Next.js Command Center** provides real-time telemetry, data quality metrics, and pipeline health observability.
 
 ---
 
-## 🛠️ Technology Stack
+## 🚀 Core Architecture & Compute
 
-| Category | Technology |
-|----------|-----------|
-| Cloud | Google Cloud Platform |
-| Lakehouse | Databricks |
-| Processing | Apache Spark / PySpark |
-| Storage | GCS + Delta Lake |
-| Governance | Unity Catalog |
-| Streaming | Structured Streaming |
-| Ingestion | Auto Loader / APIs / Batch |
-| Pipelines | Lakeflow |
-| Orchestration | Databricks Workflows |
-| CDC | Delta CDF / MERGE |
-| ML Lifecycle | MLflow |
-| Containers | Docker → GCP Artifact Registry |
-| Infrastructure | Terraform |
-| Version Control | Git + GitHub |
-| CI/CD | GitHub Actions |
-| Frontend | Next.js + TypeScript |
-| Testing | Pytest + Data/Pipeline Tests |
-| BI | Power BI |
-| Documentation | Markdown + Mermaid + ADRs |
+> **Strict Compute Rule:** All computational work, data processing, and pipeline execution is isolated entirely to **Google Cloud Platform (GCP)**. Absolutely no computational heavy-lifting occurs on local environments.
+
+*   **Ingestion (Bronze):** Databricks Auto Loader (`cloudFiles`) and custom REST API clients ingest raw JSON/Parquet into GCP Landing Zones (`gs://`).
+*   **Processing (Silver):** PySpark structured streaming handles deduplication, PII masking, schema evolution, and Slowly Changing Dimensions (SCD Type 2). 
+*   **Aggregation (Gold):** Highly optimized Delta tables serve business-level aggregations and machine-learning ready datasets.
+*   **Infrastructure:** GCP resources (GCS buckets, Artifact Registry) are managed via **Terraform** (`dev`, `staging`, `prod`).
 
 ---
 
-## 📁 Repository Structure
+## 📊 The 4 Global Datasets
 
-```
-├── .github/                    # CI/CD workflows, PR templates, CODEOWNERS
-├── databricks/                 # Asset Bundles, notebooks, pipeline definitions
-├── src/                        # Production Python source code
-│   ├── ingestion/              # Auto Loader and API ingestion modules
-│   ├── transformations/        # Bronze → Silver → Gold transformations
-│   ├── streaming/              # Structured Streaming jobs
-│   ├── cdc/                    # Change Data Capture merge patterns
-│   ├── quality/                # Data quality validation framework
-│   └── utilities/              # Shared helpers: config, logging, retry
-├── sql/                        # DDL for Bronze, Silver, and Gold tables
-├── tests/                      # Unit, integration, data quality, performance
-├── infrastructure/             # Terraform (GCP + Databricks), Docker
-├── monitoring/                 # Alert rules, metric definitions, dashboards
-├── monitoring-ui/              # Next.js Data Platform Control Center
-├── configs/                    # Environment-specific configurations
-├── data-contracts/             # Formal contracts for Gold data products
-├── docs/                       # Full project documentation
-└── ADR/                        # Architecture Decision Records
-```
+This platform natively parallel-processes four distinct, high-velocity datasets:
+
+### 1. 🦇 Ethereum Web3
+*   **Ingestion:** Auto Loader with `schemaEvolutionMode: "rescue"` to handle dynamic smart contract events.
+*   **Transformations:** Complex Hex-to-Long decoding of `gas` and transaction `value` during Silver processing.
+*   **Gold Metrics:** Daily ETH transferred, average gas utilized, and wallet activity trends.
+
+### 2. 🐙 GitHub Archive
+*   **Ingestion:** Auto Loader with `schemaEvolutionMode: "addNewColumns"` for highly nested, evolving JSON events.
+*   **Transformations:** Unpacking deeply nested structs and enforcing strict row deduplication.
+*   **Gold Metrics:** Daily repository event velocity and global developer activity.
+
+### 3. 🗺️ Overture Maps
+*   **Ingestion:** High-throughput Parquet ingestion via Auto Loader.
+*   **Transformations:** Strict geospatial boundary validations (Lat/Lon filtering).
+*   **Gold Metrics:** Point of Interest (POI) categorization and global region mapping.
+
+### 4. 💬 Reddit Pushshift
+*   **Ingestion:** Custom resilience-focused `RestApiReader` polling live submission APIs.
+*   **Transformations:** HTML stripping, **PII Masking** (Email pseudonymization), and historical state tracking via **SCD Type 2 CDC**.
+*   **Gold Metrics:** Subreddit sentiment, posting volume, and average community scores.
 
 ---
 
-## 🚀 Getting Started
+## 🛡️ Enterprise Data Quality & Quarantine
 
-### Prerequisites
-- Python 3.10+
-- Node.js 20+
-- GCP CLI (`gcloud`)
-- Databricks CLI (`databricks`)
-- Terraform 1.6+
-- Docker
+Built with a robust, highly extensible PySpark Data Quality engine:
 
-### Local Development Setup
+*   **Rule Engine:** Enforces `is_not_null`, Regex pattern matching, and complex Window-based uniqueness constraints (`rule_is_unique`).
+*   **Quarantine Flow:** Records failing fatal constraints (e.g., invalid geospatial coordinates) are automatically routed to a dedicated `quality.quarantine` Delta table for review, ensuring the Silver layer remains pristine.
+*   **Testing:** Comprehensive **PyTest** suites utilize isolated local Delta-Spark sessions to validate CDC and Data Quality pipelines as part of the CI process.
 
+---
+
+## 🕹️ Next.js Command Center (Monitoring UI)
+
+A premium, state-of-the-art Web Application for monitoring the Lakehouse.
+*   **Tech Stack:** Next.js 14, React, Vanilla CSS (Glassmorphism), `framer-motion` for micro-animations.
+*   **Features:** Features 4 dedicated dashboard sections reflecting real-time row counts, streaming ingestion rates, and compute node health directly from the Databricks backend.
+
+To run the UI locally:
 ```bash
-# 1. Clone the repository
-git clone https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform.git
-cd Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform
-
-# 2. Install Python dependencies (using uv or pip)
-pip install -e ".[dev]"
-
-# 3. Install pre-commit hooks
-pre-commit install
-
-# 4. Verify setup — run linting and unit tests
-ruff check .
-pytest tests/unit/ -v
-
-# 5. Set up Next.js monitoring UI
 cd monitoring-ui
 npm install
 npm run dev
@@ -116,44 +73,31 @@ npm run dev
 
 ---
 
-## 🔄 Development Workflow
+## ⚙️ Orchestration & CI/CD
 
-1. **Create an issue** in GitHub for the work you are doing.
-2. **Create a feature branch**: `git checkout -b feature/<issue-id>-short-description`
-3. **Write code + tests** following the standards in `.agents/rules/`.
-4. **Commit atomically** — one logical change per commit.
-5. **Open a Pull Request** — link to the issue, fill the PR template.
-6. **CI passes** — all gates must be green before merge.
-7. **PR is reviewed** — at least 1 approval required.
-8. **Merge to develop** → **CD deploys to Dev** → promote to Staging → Production.
+### Airflow
+Pipelines are orchestrated via **Apache Airflow** (`src/orchestration/airflow/dags/lakehouse_pipeline.py`).
+The DAG dynamically fans out to process all 4 datasets in parallel on Databricks Serverless, passing environment-specific `notebook_params` and enforcing a strict Data Quality Gate.
 
----
-
-## 📖 Documentation
-
-Full documentation is available in the [`docs/`](./docs/) directory:
-
-- [System Architecture](./docs/architecture/system-architecture.md)
-- [Data Architecture](./docs/architecture/data-architecture.md)
-- [CI/CD Strategy](./docs/cicd/strategy.md)
-- [Testing Guide](./docs/testing/unit-testing.md)
-- [Operations Runbook](./docs/operations/runbook.md)
-- [Architecture Decision Records](./ADR/)
+### GitHub Actions
+*   **CI (`ci.yml`):** Runs the PyTest Medallion test suite on all PRs.
+*   **CD (`cd-prod.yml`):** Deploys Databricks assets via the Databricks CLI (`bundle deploy`) and pushes the Next.js UI to Vercel.
 
 ---
 
-## 🔒 Security
+## 📂 Repository Structure
 
-Please see [SECURITY.md](./SECURITY.md) for the vulnerability reporting process and security policies.
-
----
-
-## 🤝 Contributing
-
-Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for our contribution guidelines, coding standards, and PR process.
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see [LICENSE](./LICENSE) for details.
+```text
+├── .github/workflows/          # CI/CD Pipelines
+├── infrastructure/terraform/   # GCP IaC (dev, staging, prod)
+├── monitoring-ui/              # Next.js Command Center App
+├── sql/                        # Unity Catalog DDL (create_tables.sql)
+├── src/
+│   ├── cdc/                    # SCD Type 2 logic
+│   ├── ingestion/              # AutoLoader & API Clients
+│   ├── orchestration/          # Airflow DAGs
+│   ├── pipelines/              # Medallion pipelines (eth, github, overture, reddit)
+│   ├── quality/                # DQ Rules & Quarantine logic
+│   └── transformations/        # PII masking & text cleaning
+└── tests/unit/                 # PyTest suites (Delta Lake local session)
+```
