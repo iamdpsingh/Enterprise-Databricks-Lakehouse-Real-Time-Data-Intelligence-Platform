@@ -14,11 +14,19 @@ HOST = os.getenv("DATABRICKS_HOST")
 TOKEN = os.getenv("DATABRICKS_TOKEN")
 
 import logging
+import os
+
+# Create logs directory if it doesn't exist
+os.makedirs("logs", exist_ok=True)
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    datefmt='%Y-%m-%d %H:%M:%S',
+    handlers=[
+        logging.FileHandler("logs/ingestion_pipeline.log"),
+        logging.StreamHandler()
+    ]
 )
 logger = logging.getLogger("IngestionPipeline")
 
