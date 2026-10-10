@@ -245,4 +245,26 @@ npm run dev
 Navigate to `http://localhost:3000` in your web browser. As the Databricks notebook processes the micro-batches, you will see the UI dynamically update, the row counts increase, and the real-time throughput rates calculate on the fly.
 
 ---
+
+## 10. 🔮 Future Scope & Advanced Architectural Upgrades
+
+To evolve this platform from a robust v1 production system into a v2 hyperscale ecosystem, the following advanced architectural upgrades are proposed:
+
+### 10.1. Apache Flink Integration (True Sub-Second Latency)
+- **Current State:** Databricks Serverless Micro-batching provides 5-10 second latency, which is highly cost-efficient but unsuitable for High-Frequency Trading (HFT) algorithms.
+- **Upgrade:** Integrate **Apache Flink** or Databricks **Project Lightspeed** for the Bronze ingestion layer. This would shift the processing model from micro-batching to true continuous record-by-record streaming, dropping pipeline latency to `<100ms` for critical Ethereum financial events.
+
+### 10.2. Infrastructure as Code (IaC) & CI/CD via DABs
+- **Current State:** Orchestration relies on an interactive Databricks Master Notebook.
+- **Upgrade:** Fully containerize the Databricks jobs using **Databricks Asset Bundles (DABs)** and **Terraform**. This will allow the pipeline to be seamlessly deployed across `dev`, `staging`, and `prod` workspaces via GitHub Actions, enforcing strict CI/CD governance and preventing manual notebook execution.
+
+### 10.3. Delta Live Tables (DLT) & dbt Core
+- **Current State:** PySpark DataFrames manage the Medallion logic natively.
+- **Upgrade:** Migrate the Silver and Gold transformations to **Delta Live Tables (DLT)** using declarative SQL. Alternatively, integrate **dbt Core** to manage the SQL DAG, allowing Data Analysts to contribute to the Gold layer materialization without needing deep PySpark knowledge.
+
+### 10.4. Automated Dead Letter Queue (DLQ) Recovery Agents
+- **Current State:** The Quarantine table isolates bad data, but requires manual engineering intervention to analyze and replay.
+- **Upgrade:** Deploy a Large Language Model (LLM) agent (e.g., Databricks DBRX) that monitors the DLQ. When a schema drift occurs (e.g., GitHub adds a new field), the LLM can automatically analyze the drift, propose a PySpark code patch to the pipeline via a GitHub Pull Request, and auto-replay the quarantined data upon merge.
+
+---
 *Architected and Engineered for industrial scale. Operating securely on the Databricks Data Intelligence Platform.*
