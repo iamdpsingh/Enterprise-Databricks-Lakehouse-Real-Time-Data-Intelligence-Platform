@@ -56,6 +56,20 @@ def fetch_github_data():
         "created_at": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
     }
 
+def fetch_overture_data():
+    """Simulate fetching raw data from Overture Maps Foundation API"""
+    # Includes intentional bad data (lat > 90) to trigger Data Quality Quarantines!
+    lat = random.uniform(30.0, 95.0) 
+    lon = random.uniform(-125.0, -70.0)
+    return {
+        "id": f"poi_{uuid.uuid4().hex[:10]}",
+        "name": random.choice(["Central Park", "Eiffel Tower", "Golden Gate Bridge", "Louvre Museum", "Unknown Location"]),
+        "category": random.choice(["park", "landmark", "museum", "restaurant"]),
+        "latitude": lat,
+        "longitude": lon,
+        "timestamp": datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
+    }
+
 print("🚀 Starting real API -> GCP Cloud Storage pipeline...")
 insertions = 0
 
@@ -64,11 +78,13 @@ while True:
         # 1. Fetch data
         eth_payload = fetch_ethereum_data()
         gh_payload = fetch_github_data()
+        ov_payload = fetch_overture_data()
 
         # 2. Define GCS object paths (partitioned by date)
         date_partition = datetime.utcnow().strftime('%Y/%m/%d')
         eth_blob_name = f"ethereum/raw/{date_partition}/eth_{uuid.uuid4().hex[:8]}.json"
         gh_blob_name = f"github/raw/{date_partition}/gh_{uuid.uuid4().hex[:8]}.json"
+        ov_blob_name = f"overture/raw/{date_partition}/ov_{uuid.uuid4().hex[:8]}.json"
 
         # 3. Upload Ethereum to GCP
         eth_blob = bucket.blob(eth_blob_name)
@@ -77,6 +93,10 @@ while True:
         # 4. Upload GitHub to GCP
         gh_blob = bucket.blob(gh_blob_name)
         gh_blob.upload_from_string(json.dumps(gh_payload), content_type="application/json")
+
+        # 5. Upload Overture Maps to GCP
+        ov_blob = bucket.blob(ov_blob_name)
+        ov_blob.upload_from_string(json.dumps(ov_payload), content_type="application/json")
 
         insertions += 1
         print(f"[{datetime.now().strftime('%H:%M:%S')}] ☁️ Uploaded Batch #{insertions} to GCP GCS Bucket -> {BUCKET_NAME}")
