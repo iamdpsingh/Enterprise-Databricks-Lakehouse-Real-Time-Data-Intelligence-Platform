@@ -92,3 +92,21 @@ export async function getQuarantineMetrics() {
     customer_id: row.customer_id?.toString() || null
   }));
 }
+
+export async function getPlatformMetrics() {
+  const data = await executeQuery(`
+    SELECT 
+      (SELECT COUNT(*) FROM prod_catalog.ethereum.bronze) + 
+      (SELECT COUNT(*) FROM prod_catalog.github.bronze) +
+      (SELECT COUNT(*) FROM prod_catalog.reddit.bronze) +
+      (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as total_records
+  `);
+  
+  if (!data || data.length === 0) return { totalRecords: 'N/A', ingestionRate: 'N/A', computeNodes: 'N/A' };
+  
+  return {
+    totalRecords: data[0].total_records?.toString() || '0',
+    ingestionRate: 'Live Stream',
+    computeNodes: 'Auto-Scaling'
+  };
+}

@@ -5,12 +5,20 @@ import MetricCard from '@/components/MetricCard';
 import StatusIndicator from '@/components/StatusIndicator';
 import { motion } from 'framer-motion';
 
+import { getPlatformMetrics } from '@/actions/metrics';
+
 export default function Dashboard() {
+  const [metrics, setMetrics] = React.useState({ totalRecords: 'Loading...', ingestionRate: 'Loading...', computeNodes: 'Loading...' });
+
+  React.useEffect(() => {
+    getPlatformMetrics().then(res => setMetrics(res)).catch(() => {});
+  }, []);
+
   const datasetStatuses = [
-    { name: 'Ethereum Web3', rows: '12B+', rate: '4k/sec', status: 'Streaming (GCP)' },
-    { name: 'GitHub Archive', rows: '8B+', rate: '2.1k/sec', status: 'Streaming (GCP)' },
-    { name: 'Overture Maps', rows: '500M+', rate: 'Batch/Daily', status: 'Healthy (GCP)' },
-    { name: 'Reddit Pushshift', rows: '3B+', rate: '500/sec', status: 'Streaming (GCP)' }
+    { name: 'Ethereum Web3', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' },
+    { name: 'GitHub Archive', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' },
+    { name: 'Overture Maps', rows: 'Dynamic', rate: 'Daily Batch', status: 'Healthy (GCP)' },
+    { name: 'Reddit Pushshift', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' }
   ];
 
   const containerVariants = {
@@ -45,23 +53,23 @@ export default function Dashboard() {
         <motion.div variants={itemVariants}>
           <MetricCard 
             title="Total Records Governed" 
-            value="23.5B+" 
-            trend={5.2}
+            value={metrics.totalRecords} 
+            trend={0}
             delayClass=""
           />
         </motion.div>
         <motion.div variants={itemVariants}>
           <MetricCard 
             title="Real-Time Ingestion Rate" 
-            value="6,600 msg/sec" 
-            trend={12.4}
+            value={metrics.ingestionRate} 
+            trend={0}
             delayClass=""
           />
         </motion.div>
         <motion.div variants={itemVariants}>
           <MetricCard 
             title="Compute Nodes (GCP)" 
-            value="48 Workers" 
+            value={metrics.computeNodes} 
             trend={0}
             delayClass=""
           />
