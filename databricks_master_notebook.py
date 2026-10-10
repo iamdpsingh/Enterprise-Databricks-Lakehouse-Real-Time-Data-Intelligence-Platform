@@ -11,14 +11,10 @@
 
 from pyspark.sql.functions import current_timestamp
 
-# ⚠️ CHANGE THIS TO YOUR ACTUAL GCP PROJECT ID
-GCP_BUCKET_NAME = "databrick-project-510903-raw-landing-zone"
+# We are utilizing Databricks Unity Catalog Volumes as our landing zone.
+# This completely bypasses all cloud IAM permission issues.
 
-# Base paths
-GCS_BASE_URI = f"gs://{GCP_BUCKET_NAME}"
-CHECKPOINT_BASE = f"{GCS_BASE_URI}/checkpoints"
-
-print(f"🚀 Initializing Databricks Auto Loader targeting: {GCS_BASE_URI}")
+print(f"🚀 Initializing Databricks Auto Loader targeting Unity Catalog Volumes")
 
 # =========================================================================================
 # 1. ETHEREUM WEB3 PIPELINE
@@ -29,15 +25,15 @@ eth_stream = (
     .option("cloudFiles.format", "json")
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaEvolutionMode", "rescue")
-    .option("cloudFiles.schemaLocation", f"{CHECKPOINT_BASE}/ethereum/schema")
-    .load(f"{GCS_BASE_URI}/ethereum/raw/")
+    .option("cloudFiles.schemaLocation", f"/Volumes/prod_catalog/ethereum/raw_landing/_checkpoints/schema")
+    .load(f"/Volumes/prod_catalog/ethereum/raw_landing/")
     .withColumn("_ingested_at", current_timestamp())
 )
 
 eth_query = (
     eth_stream.writeStream
     .format("delta")
-    .option("checkpointLocation", f"{CHECKPOINT_BASE}/ethereum/write")
+    .option("checkpointLocation", f"/Volumes/prod_catalog/ethereum/raw_landing/_checkpoints/write")
     .option("mergeSchema", "true")
     .trigger(processingTime="5 seconds") # 👈 Real-time streaming!
     .toTable("prod_catalog.ethereum.bronze")
@@ -53,15 +49,15 @@ gh_stream = (
     .option("cloudFiles.format", "json")
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaEvolutionMode", "addNewColumns")
-    .option("cloudFiles.schemaLocation", f"{CHECKPOINT_BASE}/github/schema")
-    .load(f"{GCS_BASE_URI}/github/raw/")
+    .option("cloudFiles.schemaLocation", f"/Volumes/prod_catalog/github/raw_landing/_checkpoints/schema")
+    .load(f"/Volumes/prod_catalog/github/raw_landing/")
     .withColumn("_ingested_at", current_timestamp())
 )
 
 gh_query = (
     gh_stream.writeStream
     .format("delta")
-    .option("checkpointLocation", f"{CHECKPOINT_BASE}/github/write")
+    .option("checkpointLocation", f"/Volumes/prod_catalog/github/raw_landing/_checkpoints/write")
     .option("mergeSchema", "true")
     .trigger(processingTime="5 seconds") 
     .toTable("prod_catalog.github.bronze")
@@ -77,15 +73,15 @@ ov_stream = (
     .option("cloudFiles.format", "json")
     .option("cloudFiles.inferColumnTypes", "true")
     .option("cloudFiles.schemaEvolutionMode", "rescue")
-    .option("cloudFiles.schemaLocation", f"{CHECKPOINT_BASE}/overture/schema")
-    .load(f"{GCS_BASE_URI}/overture/raw/")
+    .option("cloudFiles.schemaLocation", f"/Volumes/prod_catalog/overture/raw_landing/_checkpoints/schema")
+    .load(f"/Volumes/prod_catalog/overture/raw_landing/")
     .withColumn("_ingested_at", current_timestamp())
 )
 
 ov_query = (
     ov_stream.writeStream
     .format("delta")
-    .option("checkpointLocation", f"{CHECKPOINT_BASE}/overture/write")
+    .option("checkpointLocation", f"/Volumes/prod_catalog/overture/raw_landing/_checkpoints/write")
     .option("mergeSchema", "true")
     .trigger(processingTime="5 seconds") 
     .toTable("prod_catalog.overture.bronze")
