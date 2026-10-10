@@ -177,7 +177,7 @@ export default function Dashboard() {
                   <td style={{ fontWeight: 500 }}>{ds.name}</td>
                   <td>{ds.rows}</td>
                   <td>{ds.rate}</td>
-                  <td>GCP (us-central1)</td>
+                  <td>Databricks/GCP (us-central1)</td>
                   <td>
                     <span style={{ 
                       display: 'inline-block',

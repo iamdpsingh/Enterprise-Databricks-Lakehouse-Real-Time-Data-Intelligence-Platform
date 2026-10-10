@@ -51,7 +51,7 @@ export default function EthereumDashboard() {
         <h3 style={{ marginBottom: '16px', color: '#fff' }}>Pipeline Health</h3>
         <p style={{ color: '#94a3b8', lineHeight: '1.6' }}>
           The Ethereum Bronze layer is currently utilizing AutoLoader with `schemaEvolutionMode: "rescue"`. 
-          Hex-to-long casting is actively functioning in the Silver layer, feeding the Gold aggregations running on GCP.
+          Hex-to-long casting and deduplication are functioning in the Silver layer, feeding the Gold aggregated views on Databricks/GCP.
         </p>
       </motion.div>
     </main>
