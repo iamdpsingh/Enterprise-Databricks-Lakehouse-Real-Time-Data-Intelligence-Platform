@@ -7,28 +7,16 @@ from datetime import datetime, timezone
 from databricks.sdk import WorkspaceClient
 from dotenv import load_dotenv
 import io
+import sys
+
+# Ensure src module is in the path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+from src.utilities.logger import logger
 
 # Load Databricks credentials from .env
 load_dotenv()
 HOST = os.getenv("DATABRICKS_HOST")
 TOKEN = os.getenv("DATABRICKS_TOKEN")
-
-import logging
-import os
-
-# Create logs directory if it doesn't exist
-os.makedirs("logs", exist_ok=True)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    handlers=[
-        logging.FileHandler("logs/ingestion_pipeline.log"),
-        logging.StreamHandler()
-    ]
-)
-logger = logging.getLogger("IngestionPipeline")
 
 if not HOST or not TOKEN:
     logger.error("Missing DATABRICKS_HOST or DATABRICKS_TOKEN in .env")
