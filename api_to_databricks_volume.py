@@ -13,13 +13,22 @@ load_dotenv()
 HOST = os.getenv("DATABRICKS_HOST")
 TOKEN = os.getenv("DATABRICKS_TOKEN")
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s [%(levelname)s] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
+logger = logging.getLogger("IngestionPipeline")
+
 if not HOST or not TOKEN:
-    print("❌ ERROR: Missing DATABRICKS_HOST or DATABRICKS_TOKEN in .env")
+    logger.error("Missing DATABRICKS_HOST or DATABRICKS_TOKEN in .env")
     exit(1)
 
 # Initialize the Databricks SDK
 w = WorkspaceClient(host=HOST, token=TOKEN)
-print(f"✅ Successfully authenticated to Databricks Workspace: {HOST}")
+logger.info(f"Successfully authenticated to Databricks Workspace: {HOST}")
 
 def fetch_ethereum_data():
     return {
@@ -49,7 +58,7 @@ def fetch_overture_data():
         "timestamp": datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
     }
 
-print("🚀 Starting API -> Databricks Unity Catalog Volume pipeline...")
+logger.info("Starting API -> Databricks Unity Catalog Volume pipeline...")
 insertions = 0
 
 while True:
@@ -71,13 +80,13 @@ while True:
         w.files.upload(ov_path, io.BytesIO(json.dumps(ov_payload).encode('utf-8')))
 
         insertions += 1
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] 📦 Uploaded Batch #{insertions} to Unity Catalog Volumes")
+        logger.info(f"Uploaded Batch #{insertions} to Unity Catalog Volumes")
 
         time.sleep(3.0)
 
     except KeyboardInterrupt:
-        print("\n🛑 Ingestion stopped by user.")
+        logger.warning("Ingestion stopped by user.")
         break
     except Exception as e:
-        print(f"\n❌ Error during Databricks Volume upload: {e}")
+        logger.error(f"Error during Databricks Volume upload: {e}")
         time.sleep(5)

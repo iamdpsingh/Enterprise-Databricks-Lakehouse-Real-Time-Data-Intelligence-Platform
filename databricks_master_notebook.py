@@ -10,11 +10,15 @@
 # =========================================================================================
 
 from pyspark.sql.functions import current_timestamp
+import logging
+
+logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
+logger = logging.getLogger("DatabricksAutoLoader")
 
 # We are utilizing Databricks Unity Catalog Volumes as our landing zone.
 # This completely bypasses all cloud IAM permission issues.
 
-print(f"🚀 Initializing Databricks Auto Loader targeting Unity Catalog Volumes")
+logger.info(f"Initializing Databricks Auto Loader targeting Unity Catalog Volumes")
 
 # =========================================================================================
 # 1. DEFINE STREAMING READERS
@@ -54,10 +58,10 @@ ov_stream = (
 # =========================================================================================
 import time
 
-print("🔥 Starting infinite continuous sync loop...")
+logger.info("Starting infinite continuous sync loop...")
 batch_id = 1
 while True:
-    print(f"\n⏳ Starting Sync Batch #{batch_id}...")
+    logger.info(f"Starting Sync Batch #{batch_id}...")
     
     eth_query = eth_stream.writeStream.format("delta").option("checkpointLocation", f"/Volumes/prod_catalog/ethereum/raw_landing/_checkpoints/write").option("mergeSchema", "true").trigger(availableNow=True).toTable("prod_catalog.ethereum.bronze")
     gh_query = gh_stream.writeStream.format("delta").option("checkpointLocation", f"/Volumes/prod_catalog/github/raw_landing/_checkpoints/write").option("mergeSchema", "true").trigger(availableNow=True).toTable("prod_catalog.github.bronze")
@@ -67,6 +71,6 @@ while True:
     gh_query.awaitTermination()
     ov_query.awaitTermination()
     
-    print(f"✅ Batch #{batch_id} complete! Databricks tables updated.")
+    logger.info(f"Batch #{batch_id} complete! Databricks tables updated.")
     batch_id += 1
     time.sleep(5) # Pause 5 seconds before checking for new files
