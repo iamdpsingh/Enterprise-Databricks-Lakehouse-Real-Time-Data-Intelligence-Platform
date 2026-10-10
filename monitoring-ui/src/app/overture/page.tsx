@@ -11,9 +11,15 @@ export default function OvertureDashboard() {
   const [data, setData] = useState({ pois: 'Loading...', categories: 'Loading...', regions: 'Loading...' });
 
   useEffect(() => {
-    getOvertureMetrics().then(res => {
-      setData(res);
-    });
+    const fetchMetrics = () => {
+      getOvertureMetrics().then(res => {
+        setData(res);
+      });
+    };
+
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };

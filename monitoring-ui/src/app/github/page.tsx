@@ -11,9 +11,15 @@ export default function GithubDashboard() {
   const [data, setData] = useState({ events: 'Loading...', uniqueRepos: 'Loading...', pushEvents: 'Loading...' });
 
   useEffect(() => {
-    getGithubMetrics().then(res => {
-      setData(res);
-    });
+    const fetchMetrics = () => {
+      getGithubMetrics().then(res => {
+        setData(res);
+      });
+    };
+
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };

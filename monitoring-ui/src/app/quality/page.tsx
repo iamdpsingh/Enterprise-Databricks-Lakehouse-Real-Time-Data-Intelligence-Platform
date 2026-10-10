@@ -17,13 +17,19 @@ export default function QualityDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getQuarantineMetrics().then(res => {
-      setRecords(res);
-      setLoading(false);
-    }).catch(err => {
-      console.error("Failed to fetch quality metrics:", err);
-      setLoading(false);
-    });
+    const fetchMetrics = () => {
+      getQuarantineMetrics().then(res => {
+        setRecords(res);
+        setLoading(false);
+      }).catch(err => {
+        console.error("Failed to fetch quality metrics:", err);
+        setLoading(false);
+      });
+    };
+
+    fetchMetrics();
+    const interval = setInterval(fetchMetrics, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   return (

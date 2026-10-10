@@ -11,7 +11,14 @@ export default function Dashboard() {
   const [metrics, setMetrics] = React.useState({ totalRecords: 'Loading...', ingestionRate: 'Loading...', computeNodes: 'Loading...' });
 
   React.useEffect(() => {
-    getPlatformMetrics().then(res => setMetrics(res)).catch(() => {});
+    const fetchMetrics = () => {
+      getPlatformMetrics().then(res => setMetrics(res)).catch(() => {});
+    };
+    
+    fetchMetrics(); // Initial fetch
+    const intervalId = setInterval(fetchMetrics, 5000); // Poll every 5 seconds
+    
+    return () => clearInterval(intervalId); // Cleanup on unmount
   }, []);
 
   const datasetStatuses = [
