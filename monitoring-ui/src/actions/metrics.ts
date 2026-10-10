@@ -15,7 +15,7 @@ async function executeQuery(query: string) {
   const client = new DBSQLClient();
   try {
     await client.connect({
-      host: DATABRICKS_HOST.replace('https://', ''),
+      host: DATABRICKS_HOST.replace('https://', '').replace(/\/$/, ''),
       path: DATABRICKS_HTTP_PATH,
       token: DATABRICKS_TOKEN,
     });
@@ -37,19 +37,19 @@ async function executeQuery(query: string) {
 }
 
 export async function getEthereumMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as txCount, AVG(gas) as avgGas, SUM(value) as totalTransfers FROM prod_catalog.ethereum.gold_metrics');
-  if (!data || data.length === 0) return { totalTransfers: 'N/A', avgGas: 'N/A', txCount: 'N/A' };
+  const data = await executeQuery('SELECT COUNT(*) as txCount, AVG(CAST(gas AS DOUBLE)) as avgGas, SUM(CAST(value AS DOUBLE)) as totalTransfers FROM prod_catalog.ethereum.bronze');
+  if (!data || data.length === 0 || !data[0].txCount) return { totalTransfers: '0 ETH', avgGas: '0', txCount: '0' };
   
   return {
-    totalTransfers: `${(data[0].totalTransfers / 1e18).toFixed(2)} ETH`,
-    avgGas: Math.round(data[0].avgGas).toString(),
+    totalTransfers: `${(Number(data[0].totalTransfers) / 1e18).toFixed(2)} ETH`,
+    avgGas: Math.round(Number(data[0].avgGas)).toString(),
     txCount: data[0].txCount.toString()
   };
 }
 
 export async function getGithubMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as events, COUNT(DISTINCT repo_id) as uniqueRepos, SUM(CASE WHEN type = "PushEvent" THEN 1 ELSE 0 END) as pushEvents FROM prod_catalog.github.gold_metrics');
-  if (!data || data.length === 0) return { events: 'N/A', uniqueRepos: 'N/A', pushEvents: 'N/A' };
+  const data = await executeQuery('SELECT COUNT(*) as events, COUNT(DISTINCT repo_name) as uniqueRepos, SUM(CASE WHEN type = "PushEvent" THEN 1 ELSE 0 END) as pushEvents FROM prod_catalog.github.bronze');
+  if (!data || data.length === 0 || !data[0].events) return { events: '0', uniqueRepos: '0', pushEvents: '0' };
   
   return {
     events: data[0].events.toString(),
@@ -59,8 +59,8 @@ export async function getGithubMetrics() {
 }
 
 export async function getOvertureMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as pois, COUNT(DISTINCT category) as categories, COUNT(DISTINCT region) as regions FROM prod_catalog.overture.gold_metrics');
-  if (!data || data.length === 0) return { pois: 'N/A', categories: 'N/A', regions: 'N/A' };
+  const data = await executeQuery('SELECT COUNT(*) as pois, COUNT(DISTINCT category) as categories, COUNT(DISTINCT ROUND(lat, 0)) as regions FROM prod_catalog.overture.bronze');
+  if (!data || data.length === 0 || !data[0].pois) return { pois: '0', categories: '0', regions: '0' };
   
   return {
     pois: data[0].pois.toString(),

@@ -37,13 +37,13 @@ export default function EthereumDashboard() {
 
       <motion.div className="metrics-grid" variants={containerVariants} initial="hidden" animate="show">
         <motion.div variants={itemVariants}>
-          <MetricCard title="Total ETH Transferred (24h)" value={data.totalTransfers} trend={12.4} delayClass="" />
+          <MetricCard title="Total ETH Transferred (24h)" value={data.totalTransfers} trend={0} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Average Gas Used" value={data.avgGas} trend={-2.1} delayClass="" />
+          <MetricCard title="Average Gas Used" value={data.avgGas} trend={0} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Transaction Count" value={data.txCount} trend={8.5} delayClass="" />
+          <MetricCard title="Transaction Count" value={data.txCount} trend={0} delayClass="" />
         </motion.div>
       </motion.div>
 

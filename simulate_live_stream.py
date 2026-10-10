@@ -56,6 +56,15 @@ def insert_fake_data(cursor):
         VALUES ('{ov_id}', '{category}', {lat}, {lon})
     """)
 
+    # 4. QUALITY QUARANTINE: Occasional bad row
+    if random.random() > 0.8:
+        dataset = random.choice(["ethereum", "github", "overture"])
+        reason = random.choice(["schema_mismatch", "null_constraint", "invalid_lat_lon", "missing_hash"])
+        cursor.execute(f"""
+            INSERT INTO prod_catalog.quality.quarantine (dataset, record, _quarantine_failed_rules)
+            VALUES ('{dataset}', 'bad_record_id_{uuid.uuid4().hex[:6]}', '{reason}')
+        """)
+
 print("🚀 Starting Multi-Dataset Live Stream Simulation...")
 print(f"🔗 Connecting to Databricks Host: {DATABRICKS_HOST}")
 

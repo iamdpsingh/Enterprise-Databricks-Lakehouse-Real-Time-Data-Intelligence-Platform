@@ -37,13 +37,13 @@ export default function GithubDashboard() {
 
       <motion.div className="metrics-grid" variants={containerVariants} initial="hidden" animate="show">
         <motion.div variants={itemVariants}>
-          <MetricCard title="Total Events Processed" value={data.events} trend={5.2} delayClass="" />
+          <MetricCard title="Total Events Processed" value={data.events} trend={0} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Active Repositories" value={data.uniqueRepos} trend={1.1} delayClass="" />
+          <MetricCard title="Active Repositories" value={data.uniqueRepos} trend={0} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Push Events (All Time)" value={data.pushEvents} trend={8.9} delayClass="" />
+          <MetricCard title="Push Events (All Time)" value={data.pushEvents} trend={0} delayClass="" />
         </motion.div>
       </motion.div>
       

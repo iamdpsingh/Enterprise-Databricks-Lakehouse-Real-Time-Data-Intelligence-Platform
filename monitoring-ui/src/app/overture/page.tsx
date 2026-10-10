@@ -37,13 +37,13 @@ export default function OvertureDashboard() {
 
       <motion.div className="metrics-grid" variants={containerVariants} initial="hidden" animate="show">
         <motion.div variants={itemVariants}>
-          <MetricCard title="Total POIs" value={data.pois} trend={0.5} delayClass="" />
+          <MetricCard title="Total POIs" value={data.pois} trend={0} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Unique Categories" value={data.categories} trend={2.4} delayClass="" />
+          <MetricCard title="Unique Categories" value={data.categories} trend={0} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Global Regions Map" value={data.regions} trend={1.2} delayClass="" />
+          <MetricCard title="Global Regions Map" value={data.regions} trend={0} delayClass="" />
         </motion.div>
       </motion.div>
       
