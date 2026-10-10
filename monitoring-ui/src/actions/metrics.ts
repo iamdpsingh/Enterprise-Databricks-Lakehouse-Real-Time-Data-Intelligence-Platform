@@ -85,16 +85,25 @@ export async function getQuarantineMetrics() {
 export async function getPlatformMetrics() {
   const data = await executeQuery(`
     SELECT 
-      (SELECT COUNT(*) FROM prod_catalog.ethereum.bronze) + 
-      (SELECT COUNT(*) FROM prod_catalog.github.bronze) +
-      (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as total_records
+      (SELECT COUNT(*) FROM prod_catalog.ethereum.bronze) as eth_count,
+      (SELECT COUNT(*) FROM prod_catalog.github.bronze) as gh_count,
+      (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as ov_count
   `);
   
-  if (!data || data.length === 0) return { totalRecords: 'N/A', ingestionRate: 'N/A', computeNodes: 'N/A' };
+  if (!data || data.length === 0) {
+    return { totalRecords: 'N/A', computeNodes: 'N/A', ethRows: 'N/A', ghRows: 'N/A', ovRows: 'N/A' };
+  }
   
+  const ethCount = Number(data[0].eth_count || 0);
+  const ghCount = Number(data[0].gh_count || 0);
+  const ovCount = Number(data[0].ov_count || 0);
+  const total = ethCount + ghCount + ovCount;
+
   return {
-    totalRecords: data[0].total_records?.toString() || '0',
-    ingestionRate: 'N/A', // Cannot be queried via SQL
-    computeNodes: 'N/A'   // Cannot be queried via SQL
+    totalRecords: total.toString(),
+    computeNodes: 'N/A',   // Cannot be queried via SQL
+    ethRows: ethCount.toString(),
+    ghRows: ghCount.toString(),
+    ovRows: ovCount.toString()
   };
 }

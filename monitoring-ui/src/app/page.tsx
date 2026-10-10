@@ -8,11 +8,58 @@ import { motion } from 'framer-motion';
 import { getPlatformMetrics } from '@/actions/metrics';
 
 export default function Dashboard() {
-  const [metrics, setMetrics] = React.useState({ totalRecords: 'Loading...', ingestionRate: 'Loading...', computeNodes: 'Loading...' });
+  const [metrics, setMetrics] = React.useState<any>({ 
+    totalRecords: 'Loading...', 
+    computeNodes: 'Loading...',
+    ethRows: 'Loading...',
+    ghRows: 'Loading...',
+    ovRows: 'Loading...'
+  });
+
+  const [rates, setRates] = React.useState({
+    totalRate: 'Calculating...',
+    ethRate: 'Calculating...',
+    ghRate: 'Calculating...',
+    ovRate: 'Calculating...'
+  });
+
+  const previousMetrics = React.useRef<any>(null);
 
   React.useEffect(() => {
     const fetchMetrics = () => {
-      getPlatformMetrics().then(res => setMetrics(res)).catch(() => {});
+      getPlatformMetrics().then(res => {
+        if (res.totalRecords !== 'N/A') {
+          if (previousMetrics.current && previousMetrics.current.totalRecords !== 'N/A') {
+            const calcRate = (current: string, prev: string) => {
+              const diff = parseInt(current) - parseInt(prev);
+              return Math.max(0, Math.floor(diff / 5));
+            };
+            
+            setRates({
+              totalRate: `${calcRate(res.totalRecords, previousMetrics.current.totalRecords)} msg/sec`,
+              ethRate: `${calcRate(res.ethRows, previousMetrics.current.ethRows)} msg/sec`,
+              ghRate: `${calcRate(res.ghRows, previousMetrics.current.ghRows)} msg/sec`,
+              ovRate: `${calcRate(res.ovRows, previousMetrics.current.ovRows)} msg/sec`
+            });
+          } else {
+            setRates({
+              totalRate: '0 msg/sec',
+              ethRate: '0 msg/sec',
+              ghRate: '0 msg/sec',
+              ovRate: '0 msg/sec'
+            });
+          }
+          previousMetrics.current = res;
+        } else {
+          setRates({
+            totalRate: 'N/A',
+            ethRate: 'N/A',
+            ghRate: 'N/A',
+            ovRate: 'N/A'
+          });
+        }
+        setMetrics(res);
+      }).catch(() => {});
     };
     
     fetchMetrics(); // Initial fetch
@@ -22,9 +69,9 @@ export default function Dashboard() {
   }, []);
 
   const datasetStatuses = [
-    { name: 'Ethereum Web3', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' },
-    { name: 'GitHub Archive', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' },
-    { name: 'Overture Maps', rows: 'Dynamic', rate: 'Daily Batch', status: 'Healthy (GCP)' }
+    { name: 'Ethereum Web3', rows: metrics.ethRows, rate: rates.ethRate, status: 'Streaming (GCP)' },
+    { name: 'GitHub Archive', rows: metrics.ghRows, rate: rates.ghRate, status: 'Streaming (GCP)' },
+    { name: 'Overture Maps', rows: metrics.ovRows, rate: rates.ovRate, status: 'Healthy (GCP)' }
   ];
 
   const containerVariants = {
@@ -67,7 +114,7 @@ export default function Dashboard() {
         <motion.div variants={itemVariants}>
           <MetricCard 
             title="Real-Time Ingestion Rate" 
-            value={metrics.ingestionRate} 
+            value={rates.totalRate} 
             trend={0}
             delayClass=""
           />
