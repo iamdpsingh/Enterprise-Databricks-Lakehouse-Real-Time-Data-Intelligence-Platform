@@ -5,18 +5,15 @@ import MetricCard from '@/components/MetricCard';
 import StatusIndicator from '@/components/StatusIndicator';
 import { motion } from 'framer-motion';
 
+import { getEthereumMetrics } from '@/actions/metrics';
+
 export default function EthereumDashboard() {
-  const [data, setData] = useState({ totalTransfers: '0', avgGas: '0', txCount: '0' });
+  const [data, setData] = useState({ totalTransfers: 'Loading...', avgGas: 'Loading...', txCount: 'Loading...' });
 
   useEffect(() => {
-    // Mock API call to Databricks backend
-    setTimeout(() => {
-      setData({
-        totalTransfers: '2,450,192 ETH',
-        avgGas: '21,040',
-        txCount: '15.2M'
-      });
-    }, 1000);
+    getEthereumMetrics().then(res => {
+      setData(res);
+    });
   }, []);
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };

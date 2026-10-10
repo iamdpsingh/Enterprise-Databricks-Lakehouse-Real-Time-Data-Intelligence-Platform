@@ -5,13 +5,15 @@ import MetricCard from '@/components/MetricCard';
 import StatusIndicator from '@/components/StatusIndicator';
 import { motion } from 'framer-motion';
 
+import { getRedditMetrics } from '@/actions/metrics';
+
 export default function RedditDashboard() {
-  const [data, setData] = useState({ posts: '0', avgScore: '0', maskedUsers: '0' });
+  const [data, setData] = useState({ posts: 'Loading...', avgScore: 'Loading...', maskedUsers: 'Loading...' });
 
   useEffect(() => {
-    setTimeout(() => {
-      setData({ posts: '3.1B', avgScore: '42.5', maskedUsers: '124M' });
-    }, 1000);
+    getRedditMetrics().then(res => {
+      setData(res);
+    });
   }, []);
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };

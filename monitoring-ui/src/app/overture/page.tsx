@@ -5,13 +5,15 @@ import MetricCard from '@/components/MetricCard';
 import StatusIndicator from '@/components/StatusIndicator';
 import { motion } from 'framer-motion';
 
+import { getOvertureMetrics } from '@/actions/metrics';
+
 export default function OvertureDashboard() {
-  const [data, setData] = useState({ pois: '0', quarantined: '0', categories: '0' });
+  const [data, setData] = useState({ pois: 'Loading...', categories: 'Loading...', regions: 'Loading...' });
 
   useEffect(() => {
-    setTimeout(() => {
-      setData({ pois: '502.1M', quarantined: '1.2M', categories: '1,420' });
-    }, 1000);
+    getOvertureMetrics().then(res => {
+      setData(res);
+    });
   }, []);
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
@@ -35,7 +37,7 @@ export default function OvertureDashboard() {
           <MetricCard title="Unique Categories" value={data.categories} trend={2.4} delayClass="" />
         </motion.div>
         <motion.div variants={itemVariants}>
-          <MetricCard title="Quarantined (Invalid Bounds)" value={data.quarantined} trend={-15.2} delayClass="" />
+          <MetricCard title="Global Regions Map" value={data.regions} trend={1.2} delayClass="" />
         </motion.div>
       </motion.div>
       

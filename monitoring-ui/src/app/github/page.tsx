@@ -5,13 +5,15 @@ import MetricCard from '@/components/MetricCard';
 import StatusIndicator from '@/components/StatusIndicator';
 import { motion } from 'framer-motion';
 
+import { getGithubMetrics } from '@/actions/metrics';
+
 export default function GithubDashboard() {
-  const [data, setData] = useState({ events: '0', uniqueRepos: '0', pushEvents: '0' });
+  const [data, setData] = useState({ events: 'Loading...', uniqueRepos: 'Loading...', pushEvents: 'Loading...' });
 
   useEffect(() => {
-    setTimeout(() => {
-      setData({ events: '8.4B', uniqueRepos: '45.2M', pushEvents: '4.1B' });
-    }, 1000);
+    getGithubMetrics().then(res => {
+      setData(res);
+    });
   }, []);
 
   const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
