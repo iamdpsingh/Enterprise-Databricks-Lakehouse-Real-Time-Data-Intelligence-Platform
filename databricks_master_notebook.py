@@ -35,7 +35,7 @@ eth_query = (
     .format("delta")
     .option("checkpointLocation", f"/Volumes/prod_catalog/ethereum/raw_landing/_checkpoints/write")
     .option("mergeSchema", "true")
-    .trigger(processingTime="5 seconds") # 👈 Real-time streaming!
+    .trigger(availableNow=True) # 👈 Serverless-compatible Trigger!
     .toTable("prod_catalog.ethereum.bronze")
 )
 print("✅ Ethereum Pipeline Started")
@@ -59,7 +59,7 @@ gh_query = (
     .format("delta")
     .option("checkpointLocation", f"/Volumes/prod_catalog/github/raw_landing/_checkpoints/write")
     .option("mergeSchema", "true")
-    .trigger(processingTime="5 seconds") 
+    .trigger(availableNow=True) 
     .toTable("prod_catalog.github.bronze")
 )
 print("✅ GitHub Pipeline Started")
@@ -83,7 +83,7 @@ ov_query = (
     .format("delta")
     .option("checkpointLocation", f"/Volumes/prod_catalog/overture/raw_landing/_checkpoints/write")
     .option("mergeSchema", "true")
-    .trigger(processingTime="5 seconds") 
+    .trigger(availableNow=True) 
     .toTable("prod_catalog.overture.bronze")
 )
 print("✅ Overture Maps Pipeline Started")
