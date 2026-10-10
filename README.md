@@ -76,6 +76,28 @@ This platform is built on advanced data engineering patterns designed for indust
 
 ---
 
+## 🚧 Architectural Challenges & Engineering Pivots
+
+Real-world enterprise data engineering rarely goes exactly as planned. This project intentionally highlights how to pivot architectures around strict security and infrastructure limitations:
+
+### 1. GCP Organizational IAM Restrictions
+- **The Problem:** The initial architecture called for the Python ingestion agent to write JSON payloads directly to a Google Cloud Storage (GCS) raw landing bucket. However, the organization enforced a strict `iam.disableServiceAccountKeyCreation` policy, preventing the generation of a Service Account key for authentication.
+- **The Solution:** The architecture was dynamically pivoted to utilize **Databricks Unity Catalog Volumes** as the raw landing zone. Unity Catalog physically manages the underlying GCS bucket securely, allowing the Python agent to authenticate via the Databricks SDK using a Personal Access Token (PAT), entirely bypassing the GCP IAM roadblock.
+
+### 2. Serverless Streaming Incompatibilities
+- **The Problem:** The initial PySpark pipeline attempted to use infinite streaming triggers (`trigger(processingTime="10 seconds")`). However, Databricks Serverless Compute architecture strictly prohibits continuous streaming triggers, causing the streams to hang indefinitely.
+- **The Solution:** The pipeline was refactored to use `trigger(availableNow=True)`, which safely terminates after processing the current queue. To emulate infinite continuous streaming, these PySpark queries were wrapped inside a native Python `while True:` continuous micro-batch loop, achieving real-time latency while remaining 100% compliant with Serverless infrastructure rules.
+
+### 3. Frontend Dashboard Query Latency
+- **The Problem:** The Next.js UI initially executed heavy aggregation queries (`SUM`, `AVG`, `COUNT`) directly against the massive Bronze Delta tables. This caused UI latency and placed unnecessary, expensive compute load on the Databricks SQL Warehouse.
+- **The Solution:** The **Gold Medallion Layer** was fully implemented. The Databricks Spark orchestrator now executes `update_gold_layer()` after every micro-batch, materializing the heavy rollups into static Gold tables. The Next.js backend was refactored to simply query `SELECT * FROM ...gold`, instantly reducing dashboard load times to single-digit milliseconds.
+
+### 4. Structlog Standard Library Bypassing
+- **The Problem:** `structlog` was implemented for structured JSON logging, but by default, it forces outputs directly to `sys.stdout` (`PrintLoggerFactory`), entirely bypassing Python's `FileHandler` and preventing logs from persisting to disk.
+- **The Solution:** The central logger was reconfigured to use `structlog.stdlib.LoggerFactory()`, cleanly routing the JSON telemetry through Python's standard logging library to persist enterprise-grade audit trails into `logs/project_system.log`.
+
+---
+
 ## 📊 Medallion Architecture Deep Dive
 
 The data is systematically promoted through a rigid Medallion progression to improve quality, structure, and query performance.
