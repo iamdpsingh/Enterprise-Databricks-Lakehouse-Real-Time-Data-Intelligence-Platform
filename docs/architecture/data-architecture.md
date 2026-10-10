@@ -8,41 +8,44 @@ We employ a strict Bronze-Silver-Gold (Medallion) architecture implemented via D
 
 ```mermaid
 flowchart LR
-    A[GCP Cloud Storage\nRaw JSON] -->|Auto Loader\n(Stream)| B[(Bronze Layer\nRaw Delta)]
+    A[Unity Catalog Volumes\nRaw JSON] -->|Auto Loader\n(Stream)| B[(Bronze Layer\nRaw Delta)]
     B -->|Structured Streaming\n+ Quality Rules| C[(Silver Layer\nCleansed Delta)]
-    C -->|Watermarked Window\nAggregations| D[(Gold Layer\nBusiness Delta)]
+    C -->|Batch Rollups\nAggregations| D[(Gold Layer\nBusiness Delta)]
     
-    B -.->|Bad Data| E[(Quarantine Table)]
+    B -.->|Bad Data / Boundary Violations| E[(Quarantine Table)]
 ```
 
+### Raw Landing Zone (Unity Catalog Volumes)
+- **Source:** Databricks Unity Catalog Volumes (`/Volumes/prod_catalog/.../raw_landing/`) physically backed by Google Cloud Storage.
+- **Mechanism:** Python API Ingestion Agent leveraging the Databricks SDK.
+- **Reasoning:** Bypasses strict GCP IAM Service Account creation restrictions by relying on Databricks Personal Access Tokens (PAT) for auth.
+
 ### Bronze Layer (Raw Ingestion)
-- **Source:** Google Cloud Storage (`gs://databrick-project-510903-raw-landing-zone/`)
 - **Mechanism:** Databricks Auto Loader (`cloudFiles`).
-- **Goal:** Ingest data exactly as it arrives without modification. 
-- **Evolution:** We utilize `schemaEvolutionMode` to dynamically handle API drifts. For Ethereum, we use `rescue` to dump unexpected columns into a `_rescued_data` column. For GitHub, we use `addNewColumns` to proactively append new fields to the schema natively.
+- **Goal:** Ingest data exactly as it arrives without modification, guaranteeing exactly-once processing via RocksDB state stores and Delta checkpoints (`_checkpoints/write`).
+- **Evolution:** We utilize `schemaEvolutionMode` to dynamically handle API drifts. For Ethereum, we use `rescue` to dump unexpected columns into a `_rescued_data` column. 
 
 ### Silver Layer (Cleansing & Conforming)
 - **Source:** Bronze Delta Tables (Stream).
-- **Mechanism:** PySpark Structured Streaming with a centralized Data Quality framework.
+- **Mechanism:** PySpark Structured Streaming with centralized Data Quality enforcement.
 - **Validation Rules:** 
-  - Ethereum: `hash` is not null; `gas` > 0.
-  - GitHub: `repo_name` matches standard `<org>/<repo>` regex.
-  - Overture: Latitudes must be between -90 and 90, Longitudes between -180 and 180.
-- **Quarantine (Dead Letter Queue):** Records failing fatal rules are instantly routed to a separate `quality.quarantine` table along with the `_quarantine_failed_rules` metadata reason. The Silver layer is guaranteed to contain 100% compliant data.
+  - Overture Maps: Latitudes must be between -90 and 90, Longitudes between -180 and 180.
+- **Deduplication:** Enforced via `.withWatermark("_ingested_at", "1 hour").dropDuplicates(["id", "_ingested_at"])`.
+- **Quarantine (Dead Letter Queue):** Records failing fatal rules are instantly split from the Silver stream and routed to `prod_catalog.quality.quarantine` along with a `_quarantine_failed_rules` metadata reason. The Silver layer is guaranteed to contain 100% compliant data.
 
 ### Gold Layer (Business Aggregations)
-- **Source:** Silver Delta Tables (Stream).
-- **Mechanism:** Spark SQL Tumbling window aggregations.
-- **Output:** Analytics-ready views optimized for the Next.js Command Center and BI tools. 
-  - Ethereum: Total ETH Transferred, Transaction Velocity.
+- **Source:** Silver Delta Tables (Batch).
+- **Mechanism:** Spark SQL Rollup aggregations executing post-stream (`update_gold_layer()`).
+- **Output:** Highly denormalized, analytics-ready views optimized for the Next.js Command Center and BI tools. 
+  - Ethereum: Total ETH Transferred, Average Gas Utilized.
   - GitHub: Global push event density by organization.
   - Overture: Categorized geographic mapping metrics.
 
 ## 2. Infrastructure & Storage
-- **GCP Project:** `databrick-project-510903`
-- **GCS Storage:** Google Cloud Storage acts as the physical persistence layer for all Unity Catalog Delta Tables.
-- **Unity Catalog (UC):** Centralized governance. All tables are created within `prod_catalog.<schema_name>.<table_name>`. UC handles ACL permissions and cross-workspace sharing dynamically.
+- **Underlying Provider:** Google Cloud Platform (GCP)
+- **GCS Storage:** Google Cloud Storage acts as the physical persistence layer for all Unity Catalog Delta Tables and Volumes.
+- **Unity Catalog (UC):** Centralized governance. All tables are created within `prod_catalog.<schema_name>.<table_name>`. 
 
-## 3. Streaming Paradigms
-- The architecture favors **Continuous Processing** for low-latency dashboards (trigger="processingTime").
-- To optimize cloud costs, pipelines can easily be swapped to **Trigger.AvailableNow()**, processing all pending files in the GCS bucket in micro-batches before shutting down the cluster.
+## 3. Streaming Paradigms (Serverless Optimization)
+- True 24/7 continuous processing (`ProcessingTime`) incurs massive idle cloud costs and is restricted on Databricks Serverless compute.
+- **Micro-Batching Optimization:** The pipeline architecture relies entirely on **`AvailableNow=True`** triggers. We achieve "near real-time" capabilities by wrapping these micro-batch triggers in a native Python `while True:` loop inside the Master Notebook. This processes all pending files in the Volume instantly, commits the ACID transaction, and safely terminates the stream, optimizing compute utilization while remaining Serverless-compliant.

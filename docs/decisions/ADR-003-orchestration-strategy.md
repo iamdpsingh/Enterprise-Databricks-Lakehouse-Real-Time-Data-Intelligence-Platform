@@ -1,21 +1,25 @@
-# ADR 003: Pipeline Orchestration Strategy
+# ADR 003: Pipeline Orchestration & Serverless Streaming Strategy
 
 ## Status
 Accepted
 
 ## Context
-An enterprise platform requires a robust orchestration engine to schedule batch jobs, trigger streaming pipelines, and manage the dependency graph between the Bronze, Silver, and Gold transformations. While tools like Apache Airflow are standard, managing an external Airflow cluster on GCP adds significant infrastructure overhead, IAM complexity, and network latency when triggering Databricks clusters.
+An enterprise platform requires a robust orchestration engine to trigger streaming pipelines and manage the dependency graph between the Bronze, Silver, and Gold transformations. 
+
+Our initial design called for standard Spark Structured Streaming triggers (`trigger(processingTime="10 seconds")`) running 24/7. However, **Databricks Serverless Compute architecture strictly prohibits continuous infinite streaming triggers**. Executing a continuous stream on Serverless causes the job to hang indefinitely or fail.
+
+If we provisioned a dedicated "Always-On" cluster to support continuous streaming, we would incur massive idle cloud compute costs, paying for VM up-time even when data velocity is low.
 
 ## Decision
-We will utilize **Databricks Workflows (Jobs)** natively integrated with the workspace, and define all infrastructure as code (IaC) using **Databricks Asset Bundles (DABs)**.
+We will orchestrate the Bronze, Silver, and Gold pipelines using **Serverless Micro-Batching wrapped in a native Python Continuous Loop**.
 
-### Core Paradigms:
-1. **Asset Bundles (`databricks.yml`):** All pipeline definitions, cluster configurations, and schedules will be declared in YAML format locally.
-2. **Remote Execution:** Developers will use the Databricks CLI (`databricks bundle deploy` and `databricks bundle run`) to sync their local code to GCP and execute it on cloud compute. Zero data processing happens on the developer laptop.
-3. **Task Dependencies:** Workflows will define strict linear DAGs (e.g. `ethereum_bronze_task` -> `ethereum_silver_task` -> `ethereum_gold_task`).
-4. **Serverless Compute:** Where applicable, Serverless compute will be utilized to reduce cluster boot times from 5 minutes down to 10 seconds.
+### Implementation Details:
+1. **AvailableNow Trigger:** All PySpark `writeStream` commands are configured with `.trigger(availableNow=True)`. This forces Spark to process all currently available files in the Unity Catalog Volume, commit the ACID transaction, and safely terminate the stream query.
+2. **Infinite Python Wrapper:** We wrap the sequential execution of the Bronze, Silver, and Gold streams inside a native Python `while True:` loop inside the Databricks Master Notebook.
+3. **Gold Layer Execution:** After the streaming queries gracefully terminate, the loop executes `update_gold_layer()` to run standard Spark SQL batch queries, materializing the Rollup aggregations before sleeping for 5 seconds and repeating.
 
 ## Consequences
-- **Positive:** Complete elimination of external orchestration infrastructure (no Airflow servers to maintain).
-- **Positive:** Deeply integrated observability within the Databricks UI, including matrix views of job runs and native alerting.
-- **Negative:** Tightly couples the orchestration logic to the Databricks ecosystem, making cross-platform orchestration (e.g., triggering a non-Databricks GCP Cloud Function as part of the DAG) more difficult compared to a platform-agnostic tool like Airflow.
+- **Positive:** We achieve "near real-time" continuous ingestion while remaining 100% compliant with Databricks Serverless limitations.
+- **Positive:** Cloud compute costs are drastically reduced. Serverless compute spins up instantly to process the queue, and automatically scales down to zero when the Python loop is `sleep`ing or waiting for data.
+- **Positive:** The Medallion dependency graph is strictly enforced (Bronze finishes -> Silver finishes -> Gold finishes), preventing dirty reads.
+- **Negative:** Wrapping streaming queries in a Python `while True:` loop is an unconventional, custom orchestration pattern that sidesteps standard Databricks Workflows (Jobs), requiring engineers to manually run the notebook cell.
