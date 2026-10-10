@@ -12,13 +12,16 @@ load_dotenv()
 GCP_PROJECT = os.getenv("GOOGLE_CLOUD_PROJECT")
 GCP_CREDS = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
 
-# Ensure environment variables are set
-if not GCP_PROJECT or not GCP_CREDS:
-    print("❌ ERROR: Missing GCP credentials in .env file (GOOGLE_CLOUD_PROJECT or GOOGLE_APPLICATION_CREDENTIALS).")
+# Ensure project is set
+if not GCP_PROJECT:
+    print("❌ ERROR: Missing GOOGLE_CLOUD_PROJECT in .env file.")
     exit(1)
 
-# Set the environment variable explicitly for the python SDK
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDS
+# Set the environment variable explicitly for the python SDK if provided
+if GCP_CREDS:
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCP_CREDS
+else:
+    print("⚠️ No GOOGLE_APPLICATION_CREDENTIALS found. Falling back to Application Default Credentials (ADC).")
 
 # Define the bucket name (must exist in your GCP project)
 BUCKET_NAME = f"{GCP_PROJECT}-raw-landing-zone"
