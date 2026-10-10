@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import StatusIndicator from '@/components/StatusIndicator';
 
+import { getQuarantineMetrics } from '@/actions/metrics';
+
 interface QuarantineRecord {
   _quarantine_reason: string;
   _quarantine_timestamp: string;
@@ -15,30 +17,13 @@ export default function QualityDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchQuarantineData = async () => {
-      try {
-        const res = await fetch('http://localhost:8000/v1/metrics/quality/quarantine');
-        if (!res.ok) throw new Error(`API error: ${res.status}`);
-        const data = await res.json();
-        
-        // Use simulated data if real data is empty to showcase the UI
-        if (!data.records || data.records.length === 0) {
-           setRecords([
-             { _quarantine_reason: "total_amount >= 0 failed", _quarantine_timestamp: new Date().toISOString(), order_id: "ORD-9281", customer_id: "CUST-104" },
-             { _quarantine_reason: "customer_id IS NOT NULL failed", _quarantine_timestamp: new Date(Date.now() - 3600000).toISOString(), order_id: "ORD-9282", customer_id: null },
-             { _quarantine_reason: "order_id IS NOT NULL failed", _quarantine_timestamp: new Date(Date.now() - 7200000).toISOString(), order_id: null, customer_id: "CUST-105" }
-           ]);
-        } else {
-           setRecords(data.records);
-        }
-      } catch (error) {
-        console.error("Failed to fetch quality metrics:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchQuarantineData();
+    getQuarantineMetrics().then(res => {
+      setRecords(res);
+      setLoading(false);
+    }).catch(err => {
+      console.error("Failed to fetch quality metrics:", err);
+      setLoading(false);
+    });
   }, []);
 
   return (

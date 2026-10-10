@@ -79,3 +79,16 @@ export async function getRedditMetrics() {
     maskedUsers: data[0].maskedUsers.toString()
   };
 }
+
+export async function getQuarantineMetrics() {
+  const data = await executeQuery('SELECT _quarantine_reason, _quarantine_timestamp, order_id, customer_id FROM prod_catalog.quality.quarantine ORDER BY _quarantine_timestamp DESC LIMIT 10');
+  
+  if (!data || data.length === 0) return [];
+  
+  return data.map((row: any) => ({
+    _quarantine_reason: row._quarantine_reason?.toString() || 'Unknown Failure',
+    _quarantine_timestamp: row._quarantine_timestamp?.toString() || new Date().toISOString(),
+    order_id: row.order_id?.toString() || null,
+    customer_id: row.customer_id?.toString() || null
+  }));
+}
