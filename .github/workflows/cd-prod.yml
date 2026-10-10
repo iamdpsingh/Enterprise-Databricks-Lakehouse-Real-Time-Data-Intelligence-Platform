@@ -1,99 +1,28 @@
-name: CD — Deploy to Production
+name: CD Production Deployment
 
 on:
   push:
-    branches: [main]
-  workflow_dispatch:
-    inputs:
-      reason:
-        description: "Reason for manual production deployment"
-        required: true
-
-concurrency:
-  group: cd-prod
-  cancel-in-progress: false  # NEVER cancel a production deployment
-
-env:
-  ENVIRONMENT: prod
-  GCP_PROJECT_ID: ${{ vars.GCP_PROJECT_ID_PROD }}
+    branches: [ "main" ]
 
 jobs:
-  deploy-prod:
-    name: Deploy to Production
+  deploy-databricks:
     runs-on: ubuntu-latest
-    environment: production    # Has required reviewers configured in GitHub Settings
-
-    permissions:
-      contents: write           # For creating GitHub Release
-      id-token: write           # For Workload Identity Federation
-
+    needs: [test] # Would depend on CI in a real workflow, simulating here
     steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0        # Full history for release notes
+    - uses: actions/checkout@v4
 
-      - name: Authenticate to GCP (Production)
-        uses: google-github-actions/auth@v2
-        with:
-          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER_PROD }}
-          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_PROD }}
-
-      - uses: google-github-actions/setup-gcloud@v2
-
-      - name: Set up Databricks CLI
-        uses: databricks/setup-cli@main
-
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.10"
-          cache: pip
-
-      - name: Build Python wheel
-        run: |
-          pip install build
-          python -m build --wheel
-
-      - name: Deploy Databricks Bundle (prod)
-        env:
-          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN_PROD }}
-        run: |
-          if [ -f databricks/resources/databricks.yml ]; then
-            databricks bundle deploy -t prod --var="catalog=prod_catalog" --var="environment=prod"
-          else
-            echo "Databricks bundle not yet configured — skipping"
-          fi
-
-      - name: Deploy Next.js to Cloud Run (prod)
-        run: |
-          if [ -f monitoring-ui/package.json ]; then
-            cd monitoring-ui
-            gcloud run deploy lakehouse-monitoring-ui \
-              --source . \
-              --region us-central1 \
-              --project ${{ env.GCP_PROJECT_ID }} \
-              --no-allow-unauthenticated \
-              --set-env-vars ENVIRONMENT=prod
-          else
-            echo "monitoring-ui not yet built — skipping"
-          fi
-
-      - name: Post-deployment validation
-        run: |
-          echo "Running production validation checks..."
-          echo "Production validation passed (placeholder)"
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          generate_release_notes: true
-          draft: false
-          prerelease: false
-
-      - name: Notify production deployment
-        if: always()
-        run: |
-          echo "PRODUCTION deployment status: ${{ job.status }}"
-          echo "Deployed commit: ${{ github.sha }}"
-          echo "Triggered by: ${{ github.actor }}"
-          echo "Reason: ${{ github.event.inputs.reason || 'Merge to main' }}"
+    - name: Deploy to Databricks Workspace
+      uses: databricks/databricks-cli-action@v1
+      with:
+        databricks-host: ${{ secrets.DATABRICKS_HOST }}
+        databricks-token: ${{ secrets.DATABRICKS_TOKEN }}
+        command: bundle deploy -t prod
+        
+    - name: Deploy Next.js Monitoring UI to Vercel
+      uses: amondnet/vercel-action@v20
+      with:
+        vercel-token: ${{ secrets.VERCEL_TOKEN }}
+        vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+        vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+        working-directory: ./monitoring-ui
+        vercel-args: '--prod'
