@@ -68,10 +68,33 @@ export default function Dashboard() {
     return () => clearInterval(intervalId); // Cleanup on unmount
   }, []);
 
+  const getStatus = (rate: string, defaultHealthy: string = 'Healthy (GCP)') => {
+    if (metrics.totalRecords === 'Loading...') return 'Connecting...';
+    if (metrics.totalRecords === 'N/A') return 'Disconnected';
+    if (rate === 'Calculating...') return 'Calculating...';
+    if (rate === '0 msg/sec') return defaultHealthy;
+    return 'Streaming (GCP)';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch(status) {
+      case 'Streaming (GCP)':
+      case 'Healthy (GCP)':
+        return { bg: 'rgba(16, 185, 129, 0.1)', text: '#10b981' };
+      case 'Disconnected':
+        return { bg: 'rgba(239, 68, 68, 0.1)', text: '#ef4444' };
+      case 'Connecting...':
+      case 'Calculating...':
+        return { bg: 'rgba(251, 146, 60, 0.1)', text: '#fb923c' };
+      default:
+        return { bg: 'rgba(148, 163, 184, 0.1)', text: '#94a3b8' }; // Idling/Other
+    }
+  };
+
   const datasetStatuses = [
-    { name: 'Ethereum Web3', rows: metrics.ethRows, rate: rates.ethRate, status: 'Streaming (GCP)' },
-    { name: 'GitHub Archive', rows: metrics.ghRows, rate: rates.ghRate, status: 'Streaming (GCP)' },
-    { name: 'Overture Maps', rows: metrics.ovRows, rate: rates.ovRate, status: 'Healthy (GCP)' }
+    { name: 'Ethereum Web3', rows: metrics.ethRows, rate: rates.ethRate, status: getStatus(rates.ethRate, 'Idling (GCP)') },
+    { name: 'GitHub Archive', rows: metrics.ghRows, rate: rates.ghRate, status: getStatus(rates.ghRate, 'Idling (GCP)') },
+    { name: 'Overture Maps', rows: metrics.ovRows, rate: rates.ovRate, status: getStatus(rates.ovRate, 'Healthy (GCP)') }
   ];
 
   const containerVariants = {
@@ -160,8 +183,8 @@ export default function Dashboard() {
                       display: 'inline-block',
                       padding: '4px 12px', 
                       borderRadius: '999px',
-                      background: 'rgba(16, 185, 129, 0.1)',
-                      color: '#10b981',
+                      background: getStatusColor(ds.status).bg,
+                      color: getStatusColor(ds.status).text,
                       fontSize: '0.8rem',
                       fontWeight: 600
                     }}>
