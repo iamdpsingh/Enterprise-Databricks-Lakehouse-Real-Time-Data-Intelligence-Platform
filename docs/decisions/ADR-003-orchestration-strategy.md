@@ -1,26 +1,21 @@
-# ADR-003: Orchestration Strategy
+# ADR 003: Pipeline Orchestration Strategy
 
 ## Status
 Accepted
 
 ## Context
-With our Medallion architecture encompassing ingestion (Bronze), quality checks and cleaning (Silver), and aggregations (Gold), we require a robust orchestration mechanism. The platform relies heavily on Databricks for compute, but we also interact with external services via FastAPI and require a centralized view of our data workflows.
-
-We need to decide whether to use Databricks Workflows exclusively, Airflow exclusively, or a hybrid approach to schedule and manage our ETL pipelines, data quality checks, and maintenance tasks.
+An enterprise platform requires a robust orchestration engine to schedule batch jobs, trigger streaming pipelines, and manage the dependency graph between the Bronze, Silver, and Gold transformations. While tools like Apache Airflow are standard, managing an external Airflow cluster on GCP adds significant infrastructure overhead, IAM complexity, and network latency when triggering Databricks clusters.
 
 ## Decision
-We will adopt a **Hybrid Orchestration Strategy**:
-1. **Airflow (Cloud Composer / Managed Airflow)** will serve as the top-level macro-orchestrator. It will handle cross-platform dependencies (e.g., triggering a Databricks pipeline only after an external GCP process completes).
-2. **Databricks Workflows (via Asset Bundles - DABs)** will be used for execution of the actual Spark jobs within Databricks. Airflow will trigger Databricks Workflows via the `DatabricksRunNowOperator` or `DatabricksSubmitRunOperator`.
+We will utilize **Databricks Workflows (Jobs)** natively integrated with the workspace, and define all infrastructure as code (IaC) using **Databricks Asset Bundles (DABs)**.
 
-### Rationale
-- **Separation of Concerns:** Airflow handles the "when" and the cross-platform dependencies. Databricks Workflows handle the "how" of Spark execution.
-- **Cost Efficiency:** Running spark jobs directly via Databricks Workflows is highly optimized (e.g., Job Clusters). Triggering them from Airflow adds no compute overhead on the Databricks side.
-- **GitOps Compatibility:** Databricks Asset Bundles (DABs) allow us to define our Databricks Workflows in YAML (`databricks.yml`) and deploy them natively via CI/CD, which perfectly aligns with our strict GitOps mandate.
-- **Extensibility:** If we later need to integrate dbt or an external API into our pipeline, Airflow's vast provider ecosystem makes this trivial.
+### Core Paradigms:
+1. **Asset Bundles (`databricks.yml`):** All pipeline definitions, cluster configurations, and schedules will be declared in YAML format locally.
+2. **Remote Execution:** Developers will use the Databricks CLI (`databricks bundle deploy` and `databricks bundle run`) to sync their local code to GCP and execute it on cloud compute. Zero data processing happens on the developer laptop.
+3. **Task Dependencies:** Workflows will define strict linear DAGs (e.g. `ethereum_bronze_task` -> `ethereum_silver_task` -> `ethereum_gold_task`).
+4. **Serverless Compute:** Where applicable, Serverless compute will be utilized to reduce cluster boot times from 5 minutes down to 10 seconds.
 
 ## Consequences
-- **Positive:** We gain a "single pane of glass" in Airflow for all business-level workflows, while leveraging native Databricks optimizations for Spark execution.
-- **Positive:** Developer experience is improved through DABs for deployment and Airflow DAGs for macro scheduling.
-- **Negative:** Increased complexity due to managing two orchestration tools. Engineers must understand both Airflow DAGs and DABs configurations.
-- **Mitigation:** We will strictly enforce that Airflow DAGs only contain lightweight orchestration logic (sensors, operators) and no heavy data transformations. All transformations remain in Databricks/Spark.
+- **Positive:** Complete elimination of external orchestration infrastructure (no Airflow servers to maintain).
+- **Positive:** Deeply integrated observability within the Databricks UI, including matrix views of job runs and native alerting.
+- **Negative:** Tightly couples the orchestration logic to the Databricks ecosystem, making cross-platform orchestration (e.g., triggering a non-Databricks GCP Cloud Function as part of the DAG) more difficult compared to a platform-agnostic tool like Airflow.

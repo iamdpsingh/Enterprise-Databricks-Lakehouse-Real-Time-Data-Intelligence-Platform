@@ -1,35 +1,21 @@
-# ADR-001: Databricks Lakehouse Architecture Baseline
+# ADR 001: Lakehouse Architecture Baseline
 
 ## Status
 Accepted
 
 ## Context
-We are building the "Enterprise Databricks Lakehouse & Real-Time Data Intelligence Platform" on GCP. The platform must be strictly governed, fully documented, observable, and automated via GitOps. We need to decide on the core foundational architecture, specifically how we manage infrastructure, code, and deployments.
+The enterprise requires a unified data platform capable of processing diverse, high-velocity data streams from across the globe (Ethereum Web3 transactions, GitHub telemetry, and Overture Geospatial data). Traditional data warehouses suffer from inflexible schemas, making it impossible to handle the rapid schema drift of third-party APIs. Conversely, traditional data lakes suffer from a lack of ACID transactions, resulting in dirty reads and unmanageable concurrent writes. 
 
 ## Decision
-We will adopt the following foundational architecture:
-1. **Infrastructure as Code (IaC) & Deployment:** Databricks Asset Bundles (DABs) will be used to deploy Databricks resources (Jobs, DLT pipelines, models). No resources will be created manually via the UI.
-2. **Compute Engine:** Databricks on GCP will serve as the core compute engine for heavy transformations.
-3. **Storage:** Google Cloud Storage (GCS) interacting with Unity Catalog via External Locations. All data will be stored in the open Delta Lake format.
-4. **Data Modeling:** Medallion Architecture (Bronze, Silver, Gold).
-    *   **Bronze:** Raw, untransformed data. Ingested via Auto Loader for streaming cloud files.
-    *   **Silver:** Cleaned, deduplicated (SCD1/SCD2), and statically masked data.
-    *   **Gold:** Business-level aggregations and dimensional models.
-5. **CI/CD:** GitHub Actions will be the orchestrator. Workload Identity Federation (WIF) will be used to authenticate with GCP/Databricks without static service account keys.
-6. **Data Quality:** Handled natively in pipeline stages using a combination of DLT expectations and a custom Quarantine splitting mechanism (`QuarantineManager`).
-7. **Observability:** Centralized JSON-formatted logging via `structlog`. Next.js dashboard for custom metric visualization.
-8. **Security & Governance:** Unity Catalog handles access control (RBAC). Secrets managed in GCP Secret Manager / Databricks Secrets.
+We will adopt the **Databricks Lakehouse Architecture** leveraging **Delta Lake** as the foundational storage format, built on top of **Google Cloud Storage (GCP)**. 
+
+### Core Tenets:
+1. **Delta Lake:** All tables (Bronze, Silver, Gold, Quarantine) will be stored in Delta format. This guarantees ACID transactions on object storage and enables time travel for debugging.
+2. **Medallion Architecture:** Data will flow progressively through Bronze (Raw), Silver (Cleansed/Typed), and Gold (Aggregated) zones.
+3. **Unity Catalog:** All assets will be registered in Unity Catalog under a unified `prod_catalog`. No hive-metastore legacy structures will be used.
+4. **Auto Loader (`cloudFiles`):** All ingestion from the GCP landing buckets will use Databricks Auto Loader to circumvent the O(N) directory listing bottleneck of standard Spark read streams.
 
 ## Consequences
-**Positive:**
-*   **Reproducibility:** The entire platform can be torn down and rebuilt from the Git repository.
-*   **Security:** WIF eliminates long-lived credentials.
-*   **Scalability:** Delta Lake and Spark provide limitless scale for both batch and streaming.
-
-**Negative:**
-*   **Learning Curve:** Developers must understand DABs, WIF, and strictly adhere to the GitOps workflow. Local testing requires bridging to a Databricks cluster (e.g., Databricks Connect).
-*   **Overhead:** Enforcing atomic commits and strict CI checks slows down initial "quick and dirty" prototyping.
-
-## References
-*   Project 6 Master Architecture Document
-*   Databricks Asset Bundles Documentation
+- **Positive:** We gain the ability to run concurrent streaming inserts and interactive SQL BI queries on the exact same tables without locking.
+- **Positive:** Schema evolution is handled automatically by Delta Lake, preventing API schema drift from breaking the ingestion pipelines.
+- **Negative:** Enforces a hard dependency on the Databricks proprietary runtime (Auto Loader) and Unity Catalog for governance, meaning migrating to a non-Databricks Spark engine in the future would require refactoring the ingestion layer.

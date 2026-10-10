@@ -1,31 +1,21 @@
-# ADR-004: Frontend Architecture & API Integration
+# ADR 004: Frontend Observability Architecture
 
 ## Status
 Accepted
 
 ## Context
-As the Enterprise Databricks Lakehouse platform grows, data consumers (e.g., product managers, analysts, executives) require real-time visibility into Lakehouse metrics, data quality, and pipeline health.
-
-We need to establish a frontend architecture that is highly performant, visually premium, and decoupled from the heavy spark-based backend.
+A modern data platform is a "black box" to business stakeholders and even data engineers without a robust observability layer. Traditional BI tools (like Power BI or Tableau) are excellent for historical reporting but fail to provide sub-second latency for monitoring real-time streaming pipelines. We need a "Command Center" that can query the Databricks SQL engine directly, calculate streaming throughputs dynamically, and present pipeline health (e.g., Data Quality Quarantines, Ingestion Rates) in an intuitive, animated interface.
 
 ## Decision
-We will adopt the following stack and design language for the Data Intelligence Platform UI:
-1. **Frontend Framework:** Next.js (App Router, React 18+). It provides server-side rendering (SSR), static site generation (SSG), and seamless client-side interactivity.
-2. **Backend/API Layer:** FastAPI. Next.js will **not** query Databricks SQL directly. Instead, it will fetch JSON from the FastAPI backend. FastAPI acts as the unified Data API layer, connecting to Databricks SQL Warehouses and handling caching, authentication, and connection pooling.
-3. **Styling & Aesthetics:** Custom CSS modules/Vanilla CSS utilizing a **Premium Glassmorphism** design language.
-   - Dark mode default (`#0a0a0f` backgrounds).
-   - Translucent `rgba` surfaces with heavy backdrop blurring.
-   - Subtle gradients and micro-animations for high-end polish.
-   - Tailwind CSS is intentionally omitted to enforce a strict, bespoke CSS-variable-driven design system.
+We will build a custom telemetry dashboard using **Next.js 14 (App Router)** and **React**.
 
-### Rationale
-- **Decoupling:** By placing FastAPI between Next.js and Databricks, we abstract away database-specific drivers (`databricks-sql-connector`) from the frontend. This also allows other consumers (like Jupyter notebooks or mobile apps) to use the exact same API.
-- **Performance:** Next.js provides excellent perceived performance and SEO (if applicable) through its App Router and streaming capabilities.
-- **Aesthetics:** A premium, custom glassmorphism aesthetic builds immediate user trust and aligns with enterprise "Data Intelligence" branding better than standard component libraries like Material-UI or Bootstrap.
-- **Maintainability:** Standardized CSS variables allow for easy theme adjustments without diving into thousands of utility classes.
+### Implementation Details:
+1. **Server Actions:** All SQL queries are executed securely on the server using Next.js Server Actions. The `@databricks/sql` Node.js driver is used to connect to the Databricks Serverless SQL Warehouse.
+2. **Real-Time Polling:** The React frontend utilizes `useEffect` hooks to poll the Server Actions every 5 seconds.
+3. **Dynamic Delta Calculations:** The UI uses React `useRef` to store the previous polling state. By calculating `(Current Rows - Previous Rows) / 5 seconds`, the UI natively calculates the real-time Message-per-Second (msg/sec) ingestion rate without burdening Databricks with complex time-series queries.
+4. **State-Driven CSS:** If the calculated ingestion rate is `0 msg/sec`, the pipeline status gracefully degrades to a gray `Idling` state. If it is `> 0`, it switches to a green `Streaming` state. If the SQL connection fails, it degrades to a red `Disconnected` state.
 
 ## Consequences
-- **Positive:** Beautiful, highly responsive user interface that data consumers will love.
-- **Positive:** FastAPI provides a robust, typed API contract (OpenAPI/Swagger) that the frontend can rely on.
-- **Negative:** Maintaining custom CSS for a complex dashboard can be time-consuming compared to using an off-the-shelf component library.
-- **Mitigation:** We will build a strict internal design system (e.g., `MetricCard`, `DataTable`) to ensure CSS reusability and prevent ad-hoc styling.
+- **Positive:** We achieve a highly custom, industrial-grade monitoring UI that rivals internal tools built at FAANG companies.
+- **Positive:** Business logic for rate calculation is offloaded to the client browser, saving Databricks SQL compute costs.
+- **Negative:** Maintaining a custom React application introduces a new language (TypeScript) and framework to the data engineering team, requiring a broader skill set.
