@@ -68,7 +68,41 @@ ov_valid = ov_silver_stream.filter("latitude BETWEEN -90 AND 90 AND longitude BE
 ov_invalid = ov_silver_stream.filter("latitude < -90 OR latitude > 90 OR longitude < -180 OR longitude > 180").withColumn("_quarantine_failed_rules", lit("Invalid Lat/Lon Bounds"))
 
 # =========================================================================================
-# 3. CONTINUOUS MICRO-BATCH LOOP (Serverless Compatible)
+# 3. GOLD LAYER: BUSINESS AGGREGATIONS (ROLLUPS)
+# =========================================================================================
+def update_gold_layer():
+    # Ethereum Gold Aggregations
+    spark.sql("""
+        CREATE OR REPLACE TABLE prod_catalog.ethereum.gold AS 
+        SELECT 
+            COUNT(*) as txCount, 
+            AVG(CAST(gas AS DOUBLE)) as avgGas, 
+            SUM(CAST(value AS DOUBLE)) as totalTransfers 
+        FROM prod_catalog.ethereum.bronze
+    """)
+    
+    # GitHub Gold Aggregations
+    spark.sql("""
+        CREATE OR REPLACE TABLE prod_catalog.github.gold AS 
+        SELECT 
+            COUNT(*) as events, 
+            COUNT(DISTINCT repo_name) as uniqueRepos, 
+            SUM(CASE WHEN type = "PushEvent" THEN 1 ELSE 0 END) as pushEvents 
+        FROM prod_catalog.github.bronze
+    """)
+    
+    # Overture Maps Gold Aggregations
+    spark.sql("""
+        CREATE OR REPLACE TABLE prod_catalog.overture.gold AS 
+        SELECT 
+            COUNT(*) as pois, 
+            COUNT(DISTINCT category) as categories, 
+            COUNT(DISTINCT ROUND(latitude, 0)) as regions 
+        FROM prod_catalog.overture.bronze
+    """)
+
+# =========================================================================================
+# 4. CONTINUOUS MICRO-BATCH LOOP (Serverless Compatible)
 # =========================================================================================
 import time
 
@@ -91,6 +125,9 @@ while True:
     ov_silver_query.awaitTermination()
     ov_quarantine_query.awaitTermination()
     
-    logger.info(f"Batch #{batch_id} complete! Databricks Bronze, Silver, & Quality tables updated.")
+    # Update Gold Layer after streams finish processing the batch
+    update_gold_layer()
+    
+    logger.info(f"Batch #{batch_id} complete! Bronze, Silver, Gold, and Quality tables updated.")
     batch_id += 1
     time.sleep(5) # Pause 5 seconds before checking for new files

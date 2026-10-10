@@ -37,7 +37,7 @@ async function executeQuery(query: string) {
 }
 
 export async function getEthereumMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as txCount, AVG(CAST(gas AS DOUBLE)) as avgGas, SUM(CAST(value AS DOUBLE)) as totalTransfers FROM prod_catalog.ethereum.bronze');
+  const data = await executeQuery('SELECT * FROM prod_catalog.ethereum.gold');
   if (!data || data.length === 0 || !data[0].txCount) return { totalTransfers: '0 ETH', avgGas: '0', txCount: '0' };
   
   return {
@@ -48,7 +48,7 @@ export async function getEthereumMetrics() {
 }
 
 export async function getGithubMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as events, COUNT(DISTINCT repo_name) as uniqueRepos, SUM(CASE WHEN type = "PushEvent" THEN 1 ELSE 0 END) as pushEvents FROM prod_catalog.github.bronze');
+  const data = await executeQuery('SELECT * FROM prod_catalog.github.gold');
   if (!data || data.length === 0 || !data[0].events) return { events: '0', uniqueRepos: '0', pushEvents: '0' };
   
   return {
@@ -59,7 +59,7 @@ export async function getGithubMetrics() {
 }
 
 export async function getOvertureMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as pois, COUNT(DISTINCT category) as categories, COUNT(DISTINCT ROUND(latitude, 0)) as regions FROM prod_catalog.overture.bronze');
+  const data = await executeQuery('SELECT * FROM prod_catalog.overture.gold');
   if (!data || data.length === 0 || !data[0].pois) return { pois: '0', categories: '0', regions: '0' };
   
   return {
