@@ -1,3 +1,4 @@
+'use client';
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
@@ -5,7 +6,7 @@ import {
   LayoutDashboard, 
   ShieldCheck, 
   Network, 
-  Github, 
+  GitBranch, 
   Map, 
   MessageSquare,
   Server
@@ -17,7 +18,7 @@ export default function Sidebar() {
   const navItems = [
     { href: '/', label: 'Platform Overview', icon: LayoutDashboard },
     { href: '/ethereum', label: 'Ethereum Web3', icon: Network },
-    { href: '/github', label: 'GitHub Archive', icon: Github },
+    { href: '/github', label: 'GitHub Archive', icon: GitBranch },
     { href: '/overture', label: 'Overture Maps', icon: Map },
     { href: '/reddit', label: 'Reddit Pushshift', icon: MessageSquare },
     { href: '/quality', label: 'Data Quality', icon: ShieldCheck },
