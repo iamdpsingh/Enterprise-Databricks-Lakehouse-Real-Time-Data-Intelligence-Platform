@@ -9,7 +9,7 @@
 # 5. Hit SHIFT + ENTER to run!
 # =========================================================================================
 
-from pyspark.sql.functions import current_timestamp
+from pyspark.sql.functions import current_timestamp, lit
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
@@ -54,7 +54,21 @@ ov_stream = (
 )
 
 # =========================================================================================
-# 2. CONTINUOUS MICRO-BATCH LOOP (Serverless Compatible)
+# 2. SILVER LAYER: DATA QUALITY & DEDUPLICATION (OVERTURE)
+# =========================================================================================
+# Read from the Bronze table we just created
+ov_silver_stream = (
+    spark.readStream.table("prod_catalog.overture.bronze")
+    .withWatermark("_ingested_at", "1 hour")
+    .dropDuplicates(["id", "_ingested_at"]) # 👈 Deduplication!
+)
+
+# Rule: Latitude must be between -90 and 90, Longitude between -180 and 180
+ov_valid = ov_silver_stream.filter("latitude BETWEEN -90 AND 90 AND longitude BETWEEN -180 AND 180")
+ov_invalid = ov_silver_stream.filter("latitude < -90 OR latitude > 90 OR longitude < -180 OR longitude > 180").withColumn("_quarantine_failed_rules", lit("Invalid Lat/Lon Bounds"))
+
+# =========================================================================================
+# 3. CONTINUOUS MICRO-BATCH LOOP (Serverless Compatible)
 # =========================================================================================
 import time
 
@@ -67,10 +81,16 @@ while True:
     gh_query = gh_stream.writeStream.format("delta").option("checkpointLocation", f"/Volumes/prod_catalog/github/raw_landing/_checkpoints/write").option("mergeSchema", "true").trigger(availableNow=True).toTable("prod_catalog.github.bronze")
     ov_query = ov_stream.writeStream.format("delta").option("checkpointLocation", f"/Volumes/prod_catalog/overture/raw_landing/_checkpoints/write").option("mergeSchema", "true").trigger(availableNow=True).toTable("prod_catalog.overture.bronze")
     
+    # Run Silver Layer
+    ov_silver_query = ov_valid.writeStream.format("delta").option("checkpointLocation", f"/Volumes/prod_catalog/overture/raw_landing/_checkpoints/silver_write").option("mergeSchema", "true").trigger(availableNow=True).toTable("prod_catalog.overture.silver")
+    ov_quarantine_query = ov_invalid.writeStream.format("delta").option("checkpointLocation", f"/Volumes/prod_catalog/overture/raw_landing/_checkpoints/quarantine_write").option("mergeSchema", "true").trigger(availableNow=True).toTable("prod_catalog.quality.quarantine")
+    
     eth_query.awaitTermination()
     gh_query.awaitTermination()
     ov_query.awaitTermination()
+    ov_silver_query.awaitTermination()
+    ov_quarantine_query.awaitTermination()
     
-    logger.info(f"Batch #{batch_id} complete! Databricks tables updated.")
+    logger.info(f"Batch #{batch_id} complete! Databricks Bronze, Silver, & Quality tables updated.")
     batch_id += 1
     time.sleep(5) # Pause 5 seconds before checking for new files
