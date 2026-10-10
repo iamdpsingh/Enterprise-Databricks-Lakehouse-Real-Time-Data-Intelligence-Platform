@@ -55,7 +55,19 @@ def fetch_overture_data():
     }
 
 logger.info("Starting API -> Databricks Unity Catalog Volume pipeline...")
+
+checkpoint_file = "logs/checkpoint.json"
 insertions = 0
+
+# Resume from checkpoint if it exists
+if os.path.exists(checkpoint_file):
+    try:
+        with open(checkpoint_file, 'r') as f:
+            data = json.load(f)
+            insertions = data.get("last_batch_id", 0)
+            logger.info(f"Resuming pipeline from Batch #{insertions}...")
+    except Exception as e:
+        logger.warning(f"Could not read checkpoint file, starting fresh: {e}")
 
 while True:
     try:
@@ -76,6 +88,11 @@ while True:
         w.files.upload(ov_path, io.BytesIO(json.dumps(ov_payload).encode('utf-8')))
 
         insertions += 1
+        
+        # Save checkpoint state
+        with open(checkpoint_file, 'w') as f:
+            json.dump({"last_batch_id": insertions, "timestamp": datetime.now(timezone.utc).isoformat()}, f)
+            
         logger.info(f"Uploaded Batch #{insertions} to Unity Catalog Volumes")
 
         time.sleep(3.0)
