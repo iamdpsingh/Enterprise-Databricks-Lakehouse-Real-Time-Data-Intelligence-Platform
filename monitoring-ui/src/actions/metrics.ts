@@ -59,7 +59,7 @@ export async function getGithubMetrics() {
 }
 
 export async function getOvertureMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as pois, COUNT(DISTINCT category) as categories, COUNT(DISTINCT ROUND(lat, 0)) as regions FROM prod_catalog.overture.bronze');
+  const data = await executeQuery('SELECT COUNT(*) as pois, COUNT(DISTINCT category) as categories, COUNT(DISTINCT ROUND(latitude, 0)) as regions FROM prod_catalog.overture.bronze');
   if (!data || data.length === 0 || !data[0].pois) return { pois: '0', categories: '0', regions: '0' };
   
   return {
@@ -70,15 +70,15 @@ export async function getOvertureMetrics() {
 }
 
 export async function getQuarantineMetrics() {
-  const data = await executeQuery('SELECT _quarantine_reason, _quarantine_timestamp, order_id, customer_id FROM prod_catalog.quality.quarantine ORDER BY _quarantine_timestamp DESC LIMIT 10');
+  const data = await executeQuery('SELECT _quarantine_failed_rules, _ingested_at, id FROM prod_catalog.quality.quarantine ORDER BY _ingested_at DESC LIMIT 10');
   
   if (!data || data.length === 0) return [];
   
   return data.map((row: any) => ({
-    _quarantine_reason: row._quarantine_reason?.toString() || 'Unknown Failure',
-    _quarantine_timestamp: row._quarantine_timestamp?.toString() || new Date().toISOString(),
-    order_id: row.order_id?.toString() || null,
-    customer_id: row.customer_id?.toString() || null
+    _quarantine_reason: row._quarantine_failed_rules?.toString() || 'Unknown Failure',
+    _quarantine_timestamp: row._ingested_at?.toString() || new Date().toISOString(),
+    order_id: row.id?.toString() || 'N/A',
+    customer_id: 'Quarantined'
   }));
 }
 
@@ -87,11 +87,12 @@ export async function getPlatformMetrics() {
     SELECT 
       (SELECT COUNT(*) FROM prod_catalog.ethereum.bronze) as eth_count,
       (SELECT COUNT(*) FROM prod_catalog.github.bronze) as gh_count,
-      (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as ov_count
+      (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as ov_count,
+      (SELECT MAX(created_at) FROM prod_catalog.github.bronze) as latest_gh
   `);
   
   if (!data || data.length === 0) {
-    return { totalRecords: 'N/A', computeNodes: 'N/A', ethRows: 'N/A', ghRows: 'N/A', ovRows: 'N/A' };
+    return { totalRecords: 'N/A', latestSync: 'N/A', ethRows: 'N/A', ghRows: 'N/A', ovRows: 'N/A' };
   }
   
   const ethCount = Number(data[0].eth_count || 0);
@@ -101,7 +102,7 @@ export async function getPlatformMetrics() {
 
   return {
     totalRecords: total.toString(),
-    computeNodes: 'N/A',   // Cannot be queried via SQL
+    latestSync: data[0].latest_gh ? new Date(data[0].latest_gh).toLocaleTimeString() : 'Awaiting Data...',
     ethRows: ethCount.toString(),
     ghRows: ghCount.toString(),
     ovRows: ovCount.toString()

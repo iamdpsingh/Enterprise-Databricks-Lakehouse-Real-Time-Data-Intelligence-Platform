@@ -10,7 +10,7 @@ import { getPlatformMetrics } from '@/actions/metrics';
 export default function Dashboard() {
   const [metrics, setMetrics] = React.useState<any>({ 
     totalRecords: 'Loading...', 
-    computeNodes: 'Loading...',
+    latestSync: 'Loading...',
     ethRows: 'Loading...',
     ghRows: 'Loading...',
     ovRows: 'Loading...'
@@ -144,8 +144,8 @@ export default function Dashboard() {
         </motion.div>
         <motion.div variants={itemVariants}>
           <MetricCard 
-            title="Compute Nodes (GCP)" 
-            value={metrics.computeNodes} 
+            title="Last Databricks Sync" 
+            value={metrics.latestSync} 
             trend={0}
             delayClass=""
           />
