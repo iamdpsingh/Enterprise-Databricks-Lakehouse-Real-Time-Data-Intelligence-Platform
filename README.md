@@ -14,6 +14,9 @@ The core engineering objective of this project is to demonstrate **fault-toleran
 
 By strategically bypassing restrictive legacy cloud IAM policies via **Databricks Unity Catalog Volumes** and leveraging **Serverless Spark Micro-Batching**, this pipeline guarantees exactly-once processing semantics, strict data quality enforcement, and millisecond-latency BI reporting. This document serves as the foundational engineering specification for the platform.
 
+> [!NOTE]
+> **Synthetic Data Proof of Concept:** To demonstrate the massive scalability and fault-tolerance of this architecture without incurring thousands of dollars in third-party API costs or encountering strict rate-limiting, the ingestion layer utilizes a high-throughput **synthetic data generator**. This Python agent mimics the exact schema, polymorphism, and scale of the real Ethereum, GitHub, and Overture APIs, allowing recruiters and engineers to run the pipeline instantly and test the Dead Letter Queue logic with intentionally malformed data.
+
 ---
 
 ## 2. 🛠️ Enterprise Tech Stack
@@ -162,12 +165,12 @@ To demonstrate the robustness of this pipeline, it is designed to simultaneously
 - **Engineering Challenge:** Upstream data can contain physically impossible coordinates due to sensor errors or malformed API responses.
 - **Pipeline Solution:** The Silver layer enforces strict geographical bounding boxes. Latitudes must be between -90.0 and 90.0; Longitudes between -180.0 and 180.0. Violations trigger the Dead Letter Queue quarantine routing, ensuring downstream mapping dashboards never attempt to render a point off the globe.
 
-### 6.4. 📈 Data Volumes & Scale Metrics
-To demonstrate true enterprise scale, this platform is architected to handle the following historical data volumes, alongside the continuous real-time influx:
-- **Ethereum Web3:** ~2.4 Billion historical transactions. Raw JSON uncompressed size exceeds **4.5 Terabytes**. The high velocity of this dataset tests the pipeline's raw I/O throughput.
-- **GitHub Archive:** ~5.8 Billion historical developer events (spanning 10+ years). Uncompressed JSON size exceeds **12 Terabytes**. This dataset rigorously tests the `schemaEvolutionMode` capabilities due to extreme schema polymorphism.
-- **Overture Maps:** ~10 Billion global Point of Interest (POI) records. Physical storage size exceeds **3 Terabytes**. This dataset tests the pipeline's spatial filtering and Dead Letter Queue fail-forward mechanics.
-- **Total Platform Scale:** Architected to seamlessly process **>17 Billion Records** and **~20 Terabytes** of raw JSON telemetry without degrading Medallion processing speeds.
+### 6.4. 📈 Data Volumes & Scale Metrics (Simulated)
+To demonstrate true enterprise scale, this platform is architected to handle the following historical data volumes, alongside the continuous real-time influx (currently simulated via the synthetic data generator):
+- **Ethereum Web3:** Architected for ~2.4 Billion historical transactions. Raw JSON uncompressed size exceeds **4.5 Terabytes**. The high velocity of this synthetic stream tests the pipeline's raw I/O throughput.
+- **GitHub Archive:** Architected for ~5.8 Billion historical developer events. Uncompressed JSON size exceeds **12 Terabytes**. This dataset rigorously tests the `schemaEvolutionMode` capabilities due to extreme synthetic schema polymorphism.
+- **Overture Maps:** Architected for ~10 Billion global Point of Interest (POI) records. Physical storage size exceeds **3 Terabytes**. The synthetic generator intentionally injects malformed coordinates into this dataset to test the pipeline's spatial filtering and Dead Letter Queue fail-forward mechanics.
+- **Total Platform Scale:** Architected to seamlessly process **>17 Billion Synthetic Records** and **~20 Terabytes** of raw JSON telemetry without degrading Medallion processing speeds.
 
 ---
 
