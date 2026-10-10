@@ -16,7 +16,22 @@ By strategically bypassing restrictive legacy cloud IAM policies via **Databrick
 
 ---
 
-## 2. High-Level Architecture Blueprint
+## 2. 🛠️ Enterprise Tech Stack
+
+This project strictly utilizes modern, industry-standard enterprise tooling:
+
+- **Core Compute Engine:** Apache Spark (PySpark), Databricks Serverless Compute
+- **Storage & Table Format:** Delta Lake (ACID Transactions), Google Cloud Storage (GCS)
+- **Data Governance & IAM:** Databricks Unity Catalog
+- **Streaming Orchestration:** Databricks Auto Loader (`cloudFiles`), RocksDB State Stores
+- **Frontend / BI Dashboard:** Next.js 14 (App Router), React, TypeScript
+- **Backend APIs:** Node.js `@databricks/sql` Driver, Next.js Server Actions
+- **Logging & Telemetry:** Python `structlog` (JSON structured logging)
+- **Infrastructure Context:** Google Cloud Platform (GCP)
+
+---
+
+## 3. High-Level Architecture Blueprint
 
 The platform employs a strict separation of compute and storage. Google Cloud Storage provides the durable, highly-available persistence layer (managed securely via Unity Catalog), while Databricks Serverless provides the Massively Parallel Processing (MPP) compute engine leveraging the Tungsten execution engine and Catalyst optimizer.
 
