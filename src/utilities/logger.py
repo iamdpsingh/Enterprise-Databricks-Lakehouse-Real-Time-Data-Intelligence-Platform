@@ -41,7 +41,7 @@ def setup_logger(name: str = "lakehouse") -> structlog.BoundLogger:
         ],
         wrapper_class=structlog.make_filtering_bound_logger(logging.INFO),
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(),
+        logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=False,
     )
 
