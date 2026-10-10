@@ -20,7 +20,6 @@ export default function Sidebar() {
     { href: '/ethereum', label: 'Ethereum Web3', icon: Network },
     { href: '/github', label: 'GitHub Archive', icon: GitBranch },
     { href: '/overture', label: 'Overture Maps', icon: Map },
-    { href: '/reddit', label: 'Reddit Pushshift', icon: MessageSquare },
     { href: '/quality', label: 'Data Quality', icon: ShieldCheck },
   ];
 

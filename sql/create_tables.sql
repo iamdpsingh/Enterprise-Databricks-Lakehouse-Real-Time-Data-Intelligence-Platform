@@ -1,4 +1,4 @@
--- Unity Catalog DDL for 4 Global Datasets
+-- Unity Catalog DDL for 3 Global Datasets
 CREATE CATALOG IF NOT EXISTS prod_catalog;
 USE CATALOG prod_catalog;
 
@@ -20,11 +20,6 @@ CREATE TABLE IF NOT EXISTS overture.bronze (id STRING, category STRING, lat DOUB
 CREATE TABLE IF NOT EXISTS overture.silver (id STRING, category STRING, lat DOUBLE, lon DOUBLE);
 CREATE TABLE IF NOT EXISTS overture.gold (category STRING, poi_count BIGINT);
 
--- Reddit Pushshift
-CREATE SCHEMA IF NOT EXISTS reddit;
-CREATE TABLE IF NOT EXISTS reddit.bronze (id STRING, author STRING, selftext STRING, created_utc BIGINT, subreddit STRING, score INT, num_comments INT);
-CREATE TABLE IF NOT EXISTS reddit.silver (id STRING, author STRING, clean_text STRING, created_utc BIGINT, subreddit STRING, score INT, num_comments INT, is_current BOOLEAN, updated_at TIMESTAMP, valid_from TIMESTAMP, valid_to TIMESTAMP);
-CREATE TABLE IF NOT EXISTS reddit.gold (subreddit STRING, post_date DATE, total_posts BIGINT, avg_score DOUBLE, total_comments BIGINT);
 
 -- Quarantine
 CREATE SCHEMA IF NOT EXISTS quality;

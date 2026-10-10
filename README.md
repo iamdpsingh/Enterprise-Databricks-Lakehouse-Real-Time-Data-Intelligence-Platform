@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An **industrial-scale, production-grade data intelligence platform** built on Databricks and GCP (Project: `databrick-project-510903`). This project demonstrates enterprise data engineering best practices processing **4 Global Datasets (Ethereum Web3, GitHub Archive, Overture Maps, Reddit Pushshift) totaling over 20 Billion records**. All computational workloads are strictly isolated to **GCP compute resources**. Operations are commanded remotely from a developer laptop, ensuring absolutely **zero local computation**. Features Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability via a Next.js command center.
+An **industrial-scale, production-grade data intelligence platform** built on Databricks and GCP (Project: `databrick-project-510903`). This project demonstrates enterprise data engineering best practices processing **3 Global Datasets (Ethereum Web3, GitHub Archive, Overture Maps) totaling over 17 Billion records**. All computational workloads are strictly isolated to **GCP compute resources**. Operations are commanded remotely from a developer laptop, ensuring absolutely **zero local computation**. Features Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability via a Next.js command center.
 
 ---
 
@@ -45,9 +45,9 @@ Developer Laptop (Zero Local Computation)
 
 ---
 
-## 📊 The 4 Global Datasets
+## 📊 The 3 Global Datasets
 
-This platform is specifically tuned to ingest and transform four massive, real-time datasets.
+This platform is specifically tuned to ingest and transform three massive, real-time datasets.
 
 ### 1. 🦇 Ethereum Web3
 *   **Ingestion:** Auto Loader with `schemaEvolutionMode: "rescue"` to safely handle unexpected smart contract events.
@@ -64,10 +64,6 @@ This platform is specifically tuned to ingest and transform four massive, real-t
 *   **Transformations:** Strict geospatial boundary validations (Lat/Lon filtering).
 *   **Gold Metrics:** Point of Interest (POI) categorization and global region mapping.
 
-### 4. 💬 Reddit Pushshift
-*   **Ingestion:** Custom resilience-focused `RestApiReader` polling live submission APIs.
-*   **Transformations:** HTML stripping, **PII Masking** (Email pseudonymization), and historical state tracking via **SCD Type 2 CDC**.
-*   **Gold Metrics:** Subreddit sentiment, posting volume, and average community scores.
 
 ---
 
@@ -147,7 +143,7 @@ python3 src/orchestration/airflow/dags/lakehouse_pipeline.py
 **Expected Output:** Exits quietly with code `0` (no output means the DAG compiled successfully).
 
 ### 3. Run the Next.js Command Center (Monitoring UI)
-Launch the premium glassmorphism command center locally to view the real-time dashboard reflecting the state of the 4 datasets running on GCP.
+Launch the premium glassmorphism command center locally to view the real-time dashboard reflecting the state of the 3 datasets running on GCP.
 
 ```bash
 cd monitoring-ui

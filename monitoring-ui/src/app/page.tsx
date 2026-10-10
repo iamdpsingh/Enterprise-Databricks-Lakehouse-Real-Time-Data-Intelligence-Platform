@@ -17,8 +17,7 @@ export default function Dashboard() {
   const datasetStatuses = [
     { name: 'Ethereum Web3', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' },
     { name: 'GitHub Archive', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' },
-    { name: 'Overture Maps', rows: 'Dynamic', rate: 'Daily Batch', status: 'Healthy (GCP)' },
-    { name: 'Reddit Pushshift', rows: 'Dynamic', rate: 'Live Stream', status: 'Streaming (GCP)' }
+    { name: 'Overture Maps', rows: 'Dynamic', rate: 'Daily Batch', status: 'Healthy (GCP)' }
   ];
 
   const containerVariants = {
@@ -39,7 +38,7 @@ export default function Dashboard() {
       <header className="dashboard-header animate-fade-in">
         <div>
           <h1 className="dashboard-title">Data Intelligence Command Center</h1>
-          <p className="dashboard-subtitle">Monitoring 4 Global Datasets via Databricks & Google Cloud (GCP)</p>
+          <p className="dashboard-subtitle">Monitoring 3 Global Datasets via Databricks & Google Cloud (GCP)</p>
         </div>
         <StatusIndicator />
       </header>

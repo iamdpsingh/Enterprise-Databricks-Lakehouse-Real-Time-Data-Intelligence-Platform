@@ -69,16 +69,7 @@ export async function getOvertureMetrics() {
   };
 }
 
-export async function getRedditMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as posts, AVG(score) as avgScore, COUNT(DISTINCT author) as maskedUsers FROM prod_catalog.reddit.gold_metrics');
-  if (!data || data.length === 0) return { posts: 'N/A', avgScore: 'N/A', maskedUsers: 'N/A' };
-  
-  return {
-    posts: data[0].posts.toString(),
-    avgScore: data[0].avgScore.toFixed(1).toString(),
-    maskedUsers: data[0].maskedUsers.toString()
-  };
-}
+
 
 export async function getQuarantineMetrics() {
   const data = await executeQuery('SELECT _quarantine_reason, _quarantine_timestamp, order_id, customer_id FROM prod_catalog.quality.quarantine ORDER BY _quarantine_timestamp DESC LIMIT 10');
@@ -98,7 +89,6 @@ export async function getPlatformMetrics() {
     SELECT 
       (SELECT COUNT(*) FROM prod_catalog.ethereum.bronze) + 
       (SELECT COUNT(*) FROM prod_catalog.github.bronze) +
-      (SELECT COUNT(*) FROM prod_catalog.reddit.bronze) +
       (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as total_records
   `);
   
