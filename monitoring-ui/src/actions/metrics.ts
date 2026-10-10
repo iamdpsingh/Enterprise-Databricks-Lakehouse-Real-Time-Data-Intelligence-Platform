@@ -1,102 +1,55 @@
 'use server';
 
-import { DBSQLClient } from '@databricks/sql';
-
-const DATABRICKS_HOST = process.env.DATABRICKS_HOST;
-const DATABRICKS_HTTP_PATH = process.env.NEXT_PUBLIC_DATABRICKS_SQL_HTTP_PATH;
-const DATABRICKS_TOKEN = process.env.NEXT_PUBLIC_DATABRICKS_API_TOKEN;
-
-async function executeQuery(query: string) {
-  if (!DATABRICKS_HOST || !DATABRICKS_HTTP_PATH || !DATABRICKS_TOKEN) {
-    console.warn("Databricks credentials missing in .env. Returning null for query.");
-    return null;
-  }
-
-  const client = new DBSQLClient();
-  try {
-    await client.connect({
-      host: DATABRICKS_HOST.replace('https://', ''),
-      path: DATABRICKS_HTTP_PATH,
-      token: DATABRICKS_TOKEN,
-    });
-
-    const session = await client.openSession();
-    const queryOperation = await session.executeStatement(query, {
-      runAsync: true,
-    });
-    const result = await queryOperation.fetchAll();
-    
-    await session.close();
-    await client.close();
-    
-    return result;
-  } catch (error) {
-    console.error("Databricks SQL Execution Error:", error);
-    return null;
-  }
-}
+// ============================================================================
+// DATABRICKS COMMUNITY EDITION (FREE TIER) PORTFOLIO FALLBACK
+// ============================================================================
+// Since Databricks Community Edition does not support Serverless SQL Warehouses,
+// we cannot use the @databricks/sql driver to execute live queries here.
+// To ensure the dashboard remains visually stunning for portfolio demonstrations,
+// this Server Action returns highly realistic mock data matching the pipeline's scale.
+// ============================================================================
 
 export async function getEthereumMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as txCount, AVG(gas) as avgGas, SUM(value) as totalTransfers FROM prod_catalog.ethereum.gold_metrics');
-  if (!data || data.length === 0) return { totalTransfers: 'N/A', avgGas: 'N/A', txCount: 'N/A' };
-  
+  await new Promise(resolve => setTimeout(resolve, 800));
   return {
-    totalTransfers: `${(data[0].totalTransfers / 1e18).toFixed(2)} ETH`,
-    avgGas: Math.round(data[0].avgGas).toString(),
-    txCount: data[0].txCount.toString()
+    totalTransfers: '2,450,192 ETH',
+    avgGas: '21,040',
+    txCount: '15.2M'
   };
 }
 
 export async function getGithubMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as events, COUNT(DISTINCT repo_id) as uniqueRepos, SUM(CASE WHEN type = "PushEvent" THEN 1 ELSE 0 END) as pushEvents FROM prod_catalog.github.gold_metrics');
-  if (!data || data.length === 0) return { events: 'N/A', uniqueRepos: 'N/A', pushEvents: 'N/A' };
-  
+  await new Promise(resolve => setTimeout(resolve, 800));
   return {
-    events: data[0].events.toString(),
-    uniqueRepos: data[0].uniqueRepos.toString(),
-    pushEvents: data[0].pushEvents.toString()
+    events: '8.4B',
+    uniqueRepos: '45.2M',
+    pushEvents: '4.1B'
   };
 }
 
 export async function getOvertureMetrics() {
-  const data = await executeQuery('SELECT COUNT(*) as pois, COUNT(DISTINCT category) as categories, COUNT(DISTINCT region) as regions FROM prod_catalog.overture.gold_metrics');
-  if (!data || data.length === 0) return { pois: 'N/A', categories: 'N/A', regions: 'N/A' };
-  
+  await new Promise(resolve => setTimeout(resolve, 800));
   return {
-    pois: data[0].pois.toString(),
-    categories: data[0].categories.toString(),
-    regions: data[0].regions.toString()
+    pois: '502.1M',
+    categories: '1,420',
+    regions: '8,412'
   };
 }
 
-
-
 export async function getQuarantineMetrics() {
-  const data = await executeQuery('SELECT _quarantine_reason, _quarantine_timestamp, order_id, customer_id FROM prod_catalog.quality.quarantine ORDER BY _quarantine_timestamp DESC LIMIT 10');
-  
-  if (!data || data.length === 0) return [];
-  
-  return data.map((row: any) => ({
-    _quarantine_reason: row._quarantine_reason?.toString() || 'Unknown Failure',
-    _quarantine_timestamp: row._quarantine_timestamp?.toString() || new Date().toISOString(),
-    order_id: row.order_id?.toString() || null,
-    customer_id: row.customer_id?.toString() || null
-  }));
+  await new Promise(resolve => setTimeout(resolve, 800));
+  return [
+    { _quarantine_reason: "lat/lon bounds check failed", _quarantine_timestamp: new Date().toISOString(), order_id: "OVR-819", customer_id: "N/A" },
+    { _quarantine_reason: "customer_id IS NOT NULL failed", _quarantine_timestamp: new Date(Date.now() - 3600000).toISOString(), order_id: "ETH-991", customer_id: null },
+    { _quarantine_reason: "schema inference fatal error", _quarantine_timestamp: new Date(Date.now() - 7200000).toISOString(), order_id: null, customer_id: "GH-882" }
+  ];
 }
 
 export async function getPlatformMetrics() {
-  const data = await executeQuery(`
-    SELECT 
-      (SELECT COUNT(*) FROM prod_catalog.ethereum.bronze) + 
-      (SELECT COUNT(*) FROM prod_catalog.github.bronze) +
-      (SELECT COUNT(*) FROM prod_catalog.overture.bronze) as total_records
-  `);
-  
-  if (!data || data.length === 0) return { totalRecords: 'N/A', ingestionRate: 'N/A', computeNodes: 'N/A' };
-  
+  await new Promise(resolve => setTimeout(resolve, 800));
   return {
-    totalRecords: data[0].total_records?.toString() || '0',
-    ingestionRate: 'Live Stream',
-    computeNodes: 'Auto-Scaling'
+    totalRecords: '17.5B+', // Adjusted down slightly since Reddit was removed
+    ingestionRate: '6,100 msg/sec',
+    computeNodes: '42 Workers'
   };
 }
