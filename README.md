@@ -1,31 +1,25 @@
 # Enterprise Databricks Lakehouse & Real-Time Data Intelligence Platform
 
-[![CI](https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform/actions/workflows/ci.yml/badge.svg)](https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An **industrial-scale, production-grade data intelligence platform** built on Databricks, GCP (Project: `databrick-project-510903`), and GitHub Actions CI/CD. This project demonstrates enterprise data engineering best practices processing **4 Global Datasets (Ethereum Web3, GitHub Archive, Overture Maps, Reddit Pushshift) totaling over 20 Billion records**. All computational workloads are strictly isolated to **GCP compute resources**—no local processing is performed. Features Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability via a Next.js command center.
+An **industrial-scale, production-grade data intelligence platform** built on Databricks and GCP (Project: `databrick-project-510903`). This project demonstrates enterprise data engineering best practices processing **4 Global Datasets (Ethereum Web3, GitHub Archive, Overture Maps, Reddit Pushshift) totaling over 20 Billion records**. All computational workloads are strictly isolated to **GCP compute resources**. Operations are commanded remotely from a developer laptop, ensuring absolutely **zero local computation**. Features Medallion architecture, Unity Catalog governance, real-time streaming, automated data quality, and full operational observability via a Next.js command center.
 
 ---
 
 ## 🏗️ Architecture Overview
 
 ```
-Developer Laptop
-  └── Git Push / PR
-        └── GitHub (Control Plane)
-              ├── CI — Lint / Test / Scan / Validate
-              └── CD — Deploy to GCP + Databricks
-                    ├── GCP (Foundation)
-                    │     ├── Cloud Storage (Landing Zone)
-                    │     ├── Secret Manager
-                    │     ├── Artifact Registry (Docker)
-                    │     └── Cloud Run (Containerized Services)
-                    └── Databricks (Data Engine)
-                          ├── Unity Catalog (Governance)
-                          ├── Bronze → Silver → Gold (Medallion)
-                          ├── Structured Streaming
-                          ├── Lakeflow Pipelines
-                          └── MLflow
+Developer Laptop (Zero Local Computation)
+  └── Databricks CLI / Remote Execution
+        └── GCP (Foundation)
+              ├── Cloud Storage (Landing Zone)
+              ├── Secret Manager
+              └── Artifact Registry (Docker)
+        └── Databricks (Data Engine on GCP)
+              ├── Unity Catalog (Governance)
+              ├── Bronze → Silver → Gold (Medallion)
+              ├── Structured Streaming
+              └── Lakeflow Pipelines
 ```
 
 ---
@@ -44,13 +38,8 @@ Developer Laptop
 | Pipelines | Lakeflow |
 | Orchestration | Databricks Workflows / Apache Airflow |
 | CDC | Delta CDF / MERGE (SCD Type 2) |
-| ML Lifecycle | MLflow |
-| Containers | Docker → GCP Artifact Registry |
 | Infrastructure | Terraform |
-| Version Control | Git + GitHub |
-| CI/CD | GitHub Actions |
 | Frontend | Next.js 14 + TypeScript + Framer Motion |
-| Testing | Pytest + Data/Pipeline Tests |
 | BI | Power BI |
 | Documentation | Markdown + Mermaid + ADRs |
 
@@ -88,14 +77,12 @@ Built with a robust, highly extensible PySpark Data Quality engine:
 
 *   **Rule Engine:** Enforces `is_not_null`, Regex pattern matching, and complex Window-based uniqueness constraints (`rule_is_unique`).
 *   **Quarantine Flow:** Records failing fatal constraints (e.g., invalid geospatial coordinates) are automatically routed to a dedicated `quality.quarantine` Delta table for review, ensuring the Silver layer remains pristine.
-*   **Testing:** Comprehensive **PyTest** suites utilize isolated local Delta-Spark sessions to validate CDC and Data Quality pipelines as part of the CI process.
 
 ---
 
 ## 📁 Repository Structure
 
 ```
-├── .github/                    # CI/CD workflows, PR templates, CODEOWNERS
 ├── databricks/                 # Asset Bundles, notebooks, pipeline definitions
 ├── src/                        # Production Python source code
 │   ├── ingestion/              # Auto Loader and API ingestion modules
@@ -106,7 +93,6 @@ Built with a robust, highly extensible PySpark Data Quality engine:
 │   ├── quality/                # Data quality validation framework
 │   └── utilities/              # Shared helpers: config, logging, retry
 ├── sql/                        # DDL for Bronze, Silver, and Gold tables (create_tables.sql)
-├── tests/                      # Unit, integration, data quality, performance
 ├── infrastructure/             # Terraform (GCP + Databricks), Docker
 ├── monitoring/                 # Alert rules, metric definitions, dashboards
 ├── monitoring-ui/              # Next.js Data Platform Control Center
@@ -126,21 +112,17 @@ Built with a robust, highly extensible PySpark Data Quality engine:
 - GCP CLI (`gcloud`)
 - Databricks CLI (`databricks`)
 - Terraform 1.6+
-- Docker
 
-### Local Development Setup
+### Local Environment Setup
 
 ```bash
 # 1. Clone the repository
 git clone https://github.com/iamdpsingh/Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform.git
 cd Enterprise-Databricks-Lakehouse-Real-Time-Data-Intelligence-Platform
 
-# 2. Install Python dependencies (using uv or pip)
-pip install -e ".[dev]"
-pip install pytest pyspark delta-spark # Required for unit tests
-
-# 3. Install pre-commit hooks
-pre-commit install
+# 2. Configure Databricks CLI (Authenticates your laptop to GCP Databricks)
+databricks configure --token
+# Enter your GCP Databricks Host and Token when prompted.
 ```
 
 ---
@@ -149,14 +131,13 @@ pre-commit install
 
 You can verify that the core processing engine, data quality rules, and front-end command center are completely functional by following these steps:
 
-### 1. Run the Pipeline Unit Tests
-The Medallion pipelines and Data Quality quarantine flows are covered by comprehensive isolated PyTest suites using local Delta Lake.
-
+### 1. Execute Remote Pipelines (Zero Local Compute)
+Trigger the Medallion pipelines remotely using the Databricks CLI. All computation runs exclusively on GCP.
 ```bash
-# Run the test suite
-pytest tests/unit/ -v
+# Deploy and run the pipeline bundle on GCP Databricks
+databricks bundle deploy -t prod
+databricks bundle run orders_pipeline -t prod
 ```
-**Expected Output:** All tests should pass (green), confirming that PII masking, SCD Type 2 CDC tracking, schema evolution configurations, and quarantine routing logic execute flawlessly.
 
 ### 2. Verify Airflow DAG Orchestration
 Ensure the Airflow orchestration is structured properly without parsing errors.
@@ -166,27 +147,24 @@ python3 src/orchestration/airflow/dags/lakehouse_pipeline.py
 **Expected Output:** Exits quietly with code `0` (no output means the DAG compiled successfully).
 
 ### 3. Run the Next.js Command Center (Monitoring UI)
-Launch the premium glassmorphism command center locally to view the real-time dashboard reflecting the state of the 4 datasets.
+Launch the premium glassmorphism command center locally to view the real-time dashboard reflecting the state of the 4 datasets running on GCP.
 
 ```bash
 cd monitoring-ui
 npm install
 npm run dev
 ```
-**Expected Output:** The UI will be available at `http://localhost:3000`. Navigate through the sidebar to view the beautifully animated, dataset-specific telemetry pages (`/ethereum`, `/github`, `/overture`, `/reddit`).
+**Expected Output:** The UI will be available at `http://localhost:3000`. Navigate through the sidebar to view the beautifully animated, dataset-specific telemetry pages.
 
 ---
 
-## 🔄 Development Workflow
+## 🔄 Operations Workflow (Remote Execution)
 
-1. **Create an issue** in GitHub for the work you are doing.
-2. **Create a feature branch**: `git checkout -b feature/<issue-id>-short-description`
-3. **Write code + tests** following the standards in `.agents/rules/`.
-4. **Commit atomically** — one logical change per commit.
-5. **Open a Pull Request** — link to the issue, fill the PR template.
-6. **CI passes** — all gates must be green before merge.
-7. **PR is reviewed** — at least 1 approval required.
-8. **Merge to develop** → **CD deploys to Dev** → promote to Staging → Production.
+1. **Write Code Locally:** Develop pipeline logic (`src/`) and SQL definitions (`sql/`) in your local IDE.
+2. **Authenticate:** Ensure Databricks CLI is configured to point to your GCP workspace.
+3. **Deploy to GCP:** Run `databricks bundle deploy` to sync your local code to the remote workspace.
+4. **Execute on GCP:** Run `databricks bundle run` to trigger the jobs. **Absolutely zero data processing or Spark execution happens on your laptop.**
+5. **Monitor UI:** Open the Next.js Command Center to observe the remote cluster telemetry and data flow.
 
 ---
 
@@ -196,8 +174,6 @@ Full documentation is available in the [`docs/`](./docs/) directory:
 
 - [System Architecture](./docs/architecture/system-architecture.md)
 - [Data Architecture](./docs/architecture/data-architecture.md)
-- [CI/CD Strategy](./docs/cicd/strategy.md)
-- [Testing Guide](./docs/testing/unit-testing.md)
 - [Operations Runbook](./docs/operations/runbook.md)
 - [Architecture Decision Records](./ADR/)
 
@@ -211,7 +187,7 @@ Please see [SECURITY.md](./SECURITY.md) for the vulnerability reporting process 
 
 ## 🤝 Contributing
 
-Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for our contribution guidelines, coding standards, and PR process.
+Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for our contribution guidelines and coding standards.
 
 ---
 
