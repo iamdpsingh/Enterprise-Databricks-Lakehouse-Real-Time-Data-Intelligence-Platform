@@ -15,7 +15,7 @@ export default function MetricCard({ title, value, trend, delayClass = '' }: Met
       <h3 className="metric-title">{title}</h3>
       <p className="metric-value">{value}</p>
       
-      {trend !== undefined && (
+      {trend !== undefined && trend !== 0 && (
         <div className={`metric-trend ${isPositive ? 'trend-up' : 'trend-down'}`}>
           <span>{isPositive ? '↑' : '↓'}</span>
           <span>{Math.abs(trend)}% vs last week</span>
